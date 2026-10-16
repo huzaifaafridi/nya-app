@@ -30,7 +30,7 @@ import kotlinx.coroutines.delay
 fun Page(content: @Composable ColumnScope.() -> Unit) {
     val c = LocalNya.current
     Column(
-        Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()
+        Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding()
             .verticalScroll(rememberScrollState()).padding(24.dp),
         content = content
     )
@@ -81,7 +81,7 @@ fun SocialRow() {
 fun WelcomeScreen(onStart: () -> Unit, onSignIn: () -> Unit) {
     val c = LocalNya.current
     Column(
-        Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp),
+        Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.weight(1f))
@@ -158,7 +158,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
 fun GreetingScreen(name: String, onDone: () -> Unit) {
     val c = LocalNya.current
     LaunchedEffect(Unit) { delay(2000); onDone() }
-    Box(Modifier.fillMaxSize().background(c.bg), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().nyaBg(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.size(90.dp).clip(CircleShape)
                 .background(Brush.radialGradient(listOf(c.b1, c.b2, c.sf))))
@@ -172,7 +172,7 @@ fun GreetingScreen(name: String, onDone: () -> Unit) {
 @Composable
 fun HomePlaceholder() {
     val c = LocalNya.current
-    Box(Modifier.fillMaxSize().background(c.bg), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().nyaBg(), contentAlignment = Alignment.Center) {
         Text("Home (coming next)", color = c.sb, fontSize = 16.sp)
     }
 }

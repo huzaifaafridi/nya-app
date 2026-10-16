@@ -241,7 +241,7 @@ fun PulseRing(offsetMs: Int) {
 fun PairScreen(onConnect: () -> Unit) {
     val c = LocalNya.current
     Column(
-        Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding().padding(24.dp),
+        Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(24.dp))
