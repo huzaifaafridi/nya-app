@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -60,10 +61,19 @@ fun ChatScreen(onBack: () -> Unit) {
             typing = false
             msgs.add(Msg(fakeReplies.random(), false))
         } else if (msgs.size > 1) {
-            speaking = true
-            delay(1600)
-            speaking = false
+            val voice = VoiceEngine.chosen
+            if (!UserPref.quiet && voice != null) VoiceEngine.speak(msgs.last().text, voice)
+            else {
+                speaking = true
+                delay(1600)
+                speaking = false
+            }
         }
+    }
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        VoiceEngine.init(context)
+        onDispose { VoiceEngine.stop() }
     }
     LaunchedEffect(msgs.size, typing) {
         list.animateScrollToItem(msgs.size)
@@ -76,9 +86,10 @@ fun ChatScreen(onBack: () -> Unit) {
         ChatHeader(onBack = onBack, name = "Nya", sub = if (typing) "typing..." else "The Muse · Focus",
             state = when {
                 typing -> AvatarState.Thinking
-                speaking -> AvatarState.Speaking
+                speaking || VoiceEngine.speaking -> AvatarState.Speaking
                 else -> AvatarState.Idle
-            })
+            },
+            mouth = if (VoiceEngine.speaking) VoiceEngine.mouth else null)
 
         LazyColumn(
             state = list,

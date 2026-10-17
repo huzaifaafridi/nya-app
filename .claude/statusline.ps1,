@@ -1,0 +1,9 @@
+$j = [Console]::In.ReadToEnd() | ConvertFrom-Json
+$w = $j.rate_limits.seven_day.used_percentage
+if ($null -ne $w) {
+    $p = [math]::Round($w)
+    Set-Content -Path "$PSScriptRoot\usage.txt" -Value $p
+    "Weekly: $p%"
+} else {
+    "Weekly: n/a"
+}

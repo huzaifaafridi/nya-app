@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -107,7 +108,11 @@ private fun NavItem(t: Tab, selected: Boolean, onClick: () -> Unit) {
 fun HomeScreen(onSeeAll: () -> Unit) {
     val c = LocalNya.current
     val greet = remember { !homeGreeted }
-    LaunchedEffect(Unit) { homeGreeted = true }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        homeGreeted = true
+        VoiceEngine.init(context)
+    }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 120.dp)
@@ -157,7 +162,19 @@ fun HomeScreen(onSeeAll: () -> Unit) {
                 .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NyaOrb(56.dp) { Avatar2D(Modifier.fillMaxSize(), UserPref.companion, UserPref.skin, greet = greet) }
+            // tapping the avatar says hello instead of opening Chat
+            Box(Modifier.pressScale {
+                val voice = VoiceEngine.chosen
+                if (!UserPref.quiet && voice != null) VoiceEngine.speak("Hello, ${UserPref.name}!", voice)
+            }) {
+                NyaOrb(56.dp) {
+                    Avatar2D(
+                        Modifier.fillMaxSize(), UserPref.companion, UserPref.skin, UserPref.gender,
+                        if (VoiceEngine.speaking) AvatarState.Speaking else AvatarState.Idle,
+                        greet = greet, mouth = VoiceEngine.mouth
+                    )
+                }
+            }
             Spacer(Modifier.width(14.dp))
             Text("What's on your mind?", color = c.tx, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Box(Modifier.size(42.dp).clip(CircleShape)

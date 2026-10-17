@@ -75,6 +75,8 @@ object UserPref {
     private val QUIET = booleanPreferencesKey("quiet")
     private val COMPANION = intPreferencesKey("companion")
     private val SKIN = intPreferencesKey("skin")
+    private val VOICE = intPreferencesKey("voice")
+    private val GENDER = intPreferencesKey("gender")
 
     var name by mutableStateOf("Mercy")
 
@@ -98,11 +100,23 @@ object UserPref {
         get() = _skin
         set(v) { _skin = v; Store.save { it[SKIN] = v.toArgb() } }
 
+    private var _gender by mutableStateOf(Gender.Female)
+    var gender: Gender
+        get() = _gender
+        set(v) { _gender = v; Store.save { it[GENDER] = v.ordinal } }
+
+    private var _voice by mutableStateOf(0) // index into VoiceEngine.options
+    var voice: Int
+        get() = _voice
+        set(v) { _voice = v; Store.save { it[VOICE] = v } }
+
     fun load(p: Preferences) {
         p[MODE]?.let { _mode = it }
         p[QUIET]?.let { _quiet = it }
         p[COMPANION]?.let { i -> Companion.entries.getOrNull(i)?.let { _companion = it } }
         p[SKIN]?.let { _skin = Color(it) }
+        p[VOICE]?.let { _voice = it }
+        p[GENDER]?.let { i -> Gender.entries.getOrNull(i)?.let { _gender = it } }
     }
 }
 

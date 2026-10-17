@@ -36,6 +36,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        if (isFinishing) VoiceEngine.shutdown()
+        super.onDestroy()
+    }
+
     private fun showContent() {
         setContent {
             NyaTheme(dark = when (ThemePref.mode) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
@@ -67,10 +72,10 @@ class MainActivity : ComponentActivity() {
                             Screen.SignUp -> SignUpScreen({ s = Screen.SignIn }, { s = Screen.Verify })
                             Screen.Verify -> VerifyScreen { s = Screen.Companion }
                             Screen.Reset -> ResetScreen { s = Screen.SignIn }
-                            Screen.Companion -> CompanionScreen { s = Screen.Avatar }
-                            Screen.Avatar -> AvatarScreen { s = Screen.Permissions }
-                            Screen.Permissions -> PermissionsScreen { s = Screen.Pair }
-                            Screen.Pair -> PairScreen { s = Screen.Greeting }
+                            Screen.Companion -> CompanionScreen({ s = Screen.Avatar }, { s = Screen.Verify })
+                            Screen.Avatar -> AvatarScreen({ s = Screen.Permissions }, { s = Screen.Companion })
+                            Screen.Permissions -> PermissionsScreen({ s = Screen.Pair }, { s = Screen.Avatar })
+                            Screen.Pair -> PairScreen({ s = Screen.Greeting }, { s = Screen.Permissions })
                             Screen.Greeting -> GreetingScreen(UserPref.name) { s = Screen.Home }
                             Screen.Home -> MainTabs()
                             Screen.Chat -> ChatScreen(onBack = { s = Screen.Home })

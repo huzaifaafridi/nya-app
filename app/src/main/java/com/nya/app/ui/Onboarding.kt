@@ -1,5 +1,7 @@
 package com.nya.app.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -30,16 +33,11 @@ fun Para(text: String) {
     Text(text, color = LocalNya.current.sb, fontSize = 15.sp, lineHeight = 22.sp)
 }
 
+// back arrow plus the system back gesture for onboarding steps
 @Composable
-fun Chip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val c = LocalNya.current
-    val shape = RoundedCornerShape(20.dp)
-    Box(
-        modifier.height(42.dp).pressScale(onClick = onClick).clip(shape)
-            .background(if (selected) c.ac else c.sf)
-            .border(1.dp, if (selected) c.ac else c.ln, shape),
-        contentAlignment = Alignment.Center
-    ) { Text(text, color = if (selected) c.on else c.tx, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
+private fun StepBack(onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    IconBtn(NyaIcons.Back, onClick = onBack)
 }
 
 @Composable
@@ -103,7 +101,7 @@ fun ResetScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun CompanionScreen(onContinue: () -> Unit) {
+fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
     val items = listOf(
         "Wanderer" to "Curious about places and discoveries",
@@ -114,7 +112,8 @@ fun CompanionScreen(onContinue: () -> Unit) {
     )
     var sel by remember { mutableStateOf(1) }
     Page {
-        Spacer(Modifier.height(32.dp))
+        StepBack(onBack)
+        Spacer(Modifier.height(20.dp))
         Heading("Choose your companion")
         Spacer(Modifier.height(12.dp))
         Para("Each one thinks and talks a little differently. You can change this later in Settings.")
@@ -131,7 +130,7 @@ fun CompanionScreen(onContinue: () -> Unit) {
                     Modifier.size(48.dp).clip(CircleShape)
                         .background(Brush.radialGradient(listOf(c.b1, c.b2))),
                     contentAlignment = Alignment.Center
-                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], UserPref.skin) }
+                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], UserPref.skin, UserPref.gender) }
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Text(name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -144,52 +143,107 @@ fun CompanionScreen(onContinue: () -> Unit) {
     }
 }
 
+private val Skins = listOf(0xFFF3D5BC, 0xFFE0AC84, 0xFFC68A5E, 0xFF8D5A3B, 0xFF5A3A27)
+
+private fun previewVoice() {
+    val voice = VoiceEngine.chosen ?: return
+    VoiceEngine.speak("Hello, ${UserPref.name}! I'm ${UserPref.companion.name}. Nice to meet you.", voice)
+}
+
 @Composable
-fun AvatarScreen(onContinue: () -> Unit) {
+fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
-    val skins = listOf(0xFFF3D5BC, 0xFFE0AC84, 0xFFC68A5E, 0xFF8D5A3B, 0xFF5A3A27)
     var skin by remember { mutableStateOf(1) }
-    var voice by remember { mutableStateOf(0) }
-    Page {
-        Spacer(Modifier.height(32.dp))
-        Heading("Make it yours")
-        Spacer(Modifier.height(20.dp))
-        val shape = RoundedCornerShape(28.dp)
-        Column(
-            Modifier.fillMaxWidth().height(240.dp).clip(shape)
-                .background(Brush.verticalGradient(listOf(c.sf, c.bg))).border(1.dp, c.ln, shape),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
-        ) {
-            NyaOrb(130.dp) { Avatar2D(Modifier.fillMaxSize(), UserPref.companion, Color(skins[skin])) }
-            Spacer(Modifier.height(16.dp))
-            Text("3D preview: drag to rotate", color = c.sb, fontSize = 12.sp)
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        VoiceEngine.init(context)
+        onDispose { VoiceEngine.stop() }
+    }
+    Column(Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding()) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(24.dp)) {
+            StepBack(onBack)
+            Spacer(Modifier.height(20.dp))
+            Heading("Make it yours")
+            Spacer(Modifier.height(20.dp))
+            AvatarPreview(Color(Skins[skin]))
+            Spacer(Modifier.height(24.dp))
+            Text("Gender", color = c.sb, fontSize = 12.sp)
+            Spacer(Modifier.height(10.dp))
+            GenderPicker()
+            Spacer(Modifier.height(20.dp))
+            Text("Skin tone", color = c.sb, fontSize = 12.sp)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Skins.forEachIndexed { i, col ->
+                    Box(
+                        Modifier.size(44.dp).pressScale { skin = i }.clip(CircleShape).background(Color(col))
+                            .border(if (i == skin) 3.dp else 1.dp, if (i == skin) c.ac else c.ln, CircleShape)
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            VoicePicker()
         }
-        Spacer(Modifier.height(24.dp))
-        Text("Skin tone", color = c.sb, fontSize = 12.sp)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            skins.forEachIndexed { i, col ->
-                Box(
-                    Modifier.size(44.dp).pressScale { skin = i }.clip(CircleShape).background(Color(col))
-                        .border(if (i == skin) 3.dp else 1.dp, if (i == skin) c.ac else c.ln, CircleShape)
+        NyaButton(
+            "Continue", { UserPref.skin = Color(Skins[skin]); onContinue() },
+            Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+        )
+    }
+}
+
+// own recompose scopes, so speaking or chip changes don't redraw the whole screen
+@Composable
+private fun AvatarPreview(skin: Color) {
+    val c = LocalNya.current
+    val shape = RoundedCornerShape(28.dp)
+    Box(
+        Modifier.fillMaxWidth().height(220.dp).clip(shape)
+            .background(Brush.verticalGradient(listOf(c.sf, c.bg))).border(1.dp, c.ln, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        NyaOrb(130.dp) {
+            Crossfade(UserPref.gender to skin, animationSpec = motionSpec(), label = "look") { (gender, tone) ->
+                Avatar2D(
+                    Modifier.fillMaxSize(), UserPref.companion, tone, gender,
+                    if (VoiceEngine.speaking) AvatarState.Speaking else AvatarState.Idle, mouth = VoiceEngine.mouth
                 )
             }
         }
-        Spacer(Modifier.height(24.dp))
-        Text("Voice", color = c.sb, fontSize = 12.sp)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf("Soft", "Neutral", "Deep").forEachIndexed { i, t ->
-                Chip(t, voice == i, { voice = i }, Modifier.weight(1f))
-            }
-        }
-        Spacer(Modifier.height(32.dp))
-        NyaButton("Continue", { UserPref.skin = Color(skins[skin]); onContinue() })
     }
 }
 
 @Composable
-fun PermissionsScreen(onContinue: () -> Unit) {
+private fun GenderPicker() {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Gender.entries.forEach { g ->
+            NyaChip(g.name, UserPref.gender == g, { UserPref.gender = g; previewVoice() }, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun VoicePicker() {
+    val c = LocalNya.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Voice style", color = c.sb, fontSize = 12.sp, modifier = Modifier.weight(1f))
+        if (VoiceEngine.available) IconBtn(if (VoiceEngine.speaking) NyaIcons.Stop else NyaIcons.Play, 36.dp) {
+            if (VoiceEngine.speaking) VoiceEngine.stop() else previewVoice()
+        }
+    }
+    Spacer(Modifier.height(10.dp))
+    if (VoiceEngine.ready && !VoiceEngine.available) {
+        Text("Voices aren't available on this device.", color = c.sb, fontSize = 13.sp)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        val chosen = VoiceEngine.chosen
+        VoiceEngine.options.forEachIndexed { i, v ->
+            NyaChip(v.name, v == chosen, { UserPref.voice = i; previewVoice() }, Modifier.weight(1f), hPad = 6.dp)
+        }
+    }
+}
+
+@Composable
+fun PermissionsScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
     val items = listOf(
         "Bluetooth" to "Connect to your Nya headband",
@@ -197,7 +251,8 @@ fun PermissionsScreen(onContinue: () -> Unit) {
         "Photos" to "Save memories to your phone"
     )
     Page {
-        Spacer(Modifier.height(32.dp))
+        StepBack(onBack)
+        Spacer(Modifier.height(20.dp))
         Heading("A few permissions")
         Spacer(Modifier.height(12.dp))
         Para("Nya needs these to work. You can change them any time in Settings.")
@@ -235,13 +290,13 @@ fun PulseRing(offsetMs: Int) {
 }
 
 @Composable
-fun PairScreen(onConnect: () -> Unit) {
+fun PairScreen(onConnect: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
     Column(
         Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(24.dp))
+        Box(Modifier.fillMaxWidth()) { StepBack(onBack) }
         Box(
             Modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, c.ac, RoundedCornerShape(14.dp))
                 .padding(horizontal = 12.dp, vertical = 5.dp)
