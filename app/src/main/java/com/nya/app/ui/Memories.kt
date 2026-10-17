@@ -2,7 +2,6 @@ package com.nya.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -76,10 +75,9 @@ fun MemoryCard(m: Memory, onClick: () -> Unit) {
     val c = LocalNya.current
     val shape = RoundedCornerShape(22.dp)
     Box(
-        Modifier.fillMaxWidth().height(190.dp).clip(shape)
+        Modifier.fillMaxWidth().height(190.dp).pressScale { onClick() }.clip(shape)
             .background(Brush.verticalGradient(listOf(m.a, m.b)))
             .border(1.dp, c.ln, shape)
-            .clickable { onClick() }
     ) {
         Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
             Text(m.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -97,7 +95,7 @@ fun MemoryDetailScreen(index: Int, onBack: () -> Unit) {
         Box(Modifier.fillMaxWidth().height(340.dp)
             .background(Brush.verticalGradient(listOf(m.a, m.b)))) {
             Text("‹", color = Color.White, fontSize = 34.sp,
-                modifier = Modifier.statusBarsPadding().padding(20.dp).clickable { onBack() })
+                modifier = Modifier.statusBarsPadding().padding(20.dp).pressScale { onBack() })
         }
         Column(Modifier.padding(24.dp)) {
             Text(m.title, color = c.tx, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
@@ -121,7 +119,7 @@ fun MemoriesScreen() {
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 120.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().staggerIn(0), verticalAlignment = Alignment.CenterVertically) {
             Text("Memories", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif,
                 fontStyle = FontStyle.Italic, modifier = Modifier.weight(1f))
             Box(Modifier.size(44.dp).clip(CircleShape).background(c.sf).border(1.dp, c.ln, CircleShape),
@@ -131,7 +129,7 @@ fun MemoriesScreen() {
         Spacer(Modifier.height(14.dp))
         val bar = RoundedCornerShape(24.dp)
         Row(
-            Modifier.fillMaxWidth().height(48.dp).clip(bar).background(c.sf).border(1.dp, c.ln, bar)
+            Modifier.fillMaxWidth().height(48.dp).staggerIn(1).clip(bar).background(c.sf).border(1.dp, c.ln, bar)
                 .padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -141,15 +139,15 @@ fun MemoriesScreen() {
         }
 
         Spacer(Modifier.height(10.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState())) {
+        Row(Modifier.staggerIn(2).horizontalScroll(rememberScrollState())) {
             listOf("All", "Photos", "Clips", "Today", "Travel").forEachIndexed { i, t ->
                 NyaChip(t, f == i, { f = i })
             }
         }
 
         Spacer(Modifier.height(14.dp))
-        Text("YESTERDAY", color = c.sb, fontSize = 11.sp, letterSpacing = 2.sp)
+        Text("YESTERDAY", color = c.sb, fontSize = 11.sp, letterSpacing = 2.sp, modifier = Modifier.staggerIn(3))
         Spacer(Modifier.height(10.dp))
-        MemoriesGrid(onOpen = { MemNav.open(0) })
+        MemoriesGrid(onOpen = { MemNav.open(0) }, start = 4)
     }
 }

@@ -24,7 +24,6 @@ import com.nya.app.ui.theme.LocalNya
 fun SettingsScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     var notifs by remember { mutableStateOf(true) }
-    var quiet by remember { mutableStateOf(false) }
     val seg = RoundedCornerShape(16.dp)
 
     Column(Modifier.fillMaxSize().nyaBg()) {
@@ -32,45 +31,45 @@ fun SettingsScreen(onBack: () -> Unit) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)
         ) {
-            XCard {
+            XCard(Modifier.staggerIn(0)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(52.dp).clip(CircleShape)
                             .background(Brush.linearGradient(listOf(c.b1, c.b2))),
                         contentAlignment = Alignment.Center
-                    ) { Text("M", color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(UserPref.name.take(1), color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text("Mercy", color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text(UserPref.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         Text("Free plan", color = c.sb, fontSize = 13.sp)
                     }
                 }
             }
 
-            XLabel("Appearance")
+            XLabel("Appearance", Modifier.staggerIn(1))
             Row(
-                Modifier.fillMaxWidth().clip(seg).background(c.sf).border(1.dp, c.ln, seg).padding(4.dp)
+                Modifier.fillMaxWidth().staggerIn(2).clip(seg).background(c.sf).border(1.dp, c.ln, seg).padding(4.dp)
             ) {
                 listOf("Auto", "Light", "Dark").forEachIndexed { i, label ->
                     val sel = ThemePref.mode == i
                     Box(
-                        Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        Modifier.weight(1f).pressScale { ThemePref.mode = i }.clip(RoundedCornerShape(12.dp))
                             .background(if (sel) c.ac else Color.Transparent)
-                            .clickable { ThemePref.mode = i }.padding(vertical = 10.dp),
+                            .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) { Text(label, color = if (sel) c.on else c.sb, fontSize = 14.sp) }
                 }
             }
 
-            XLabel("Preferences")
-            XCard {
+            XLabel("Preferences", Modifier.staggerIn(3))
+            XCard(Modifier.staggerIn(4)) {
                 XToggle("Notifications", "Memory and device alerts", notifs) { notifs = it }
                 XDivider()
-                XToggle("Quiet mode", "Pause voice replies", quiet) { quiet = it }
+                XToggle("Quiet mode", "Pause voice replies", UserPref.quiet) { UserPref.quiet = it }
             }
 
-            XLabel("Account")
-            XCard {
+            XLabel("Account", Modifier.staggerIn(5))
+            XCard(Modifier.staggerIn(6)) {
                 XRow("Subscription", "Free") { SubNav.open("Subscription") }
                 XDivider()
                 XRow("Help & support") { SubNav.open("Help") }
@@ -81,7 +80,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(24.dp))
-            XGhost("Sign out", { SubNav.signOut() })
+            XGhost("Sign out", { SubNav.signOut() }, Modifier.fillMaxWidth().staggerIn(7))
             Spacer(Modifier.height(40.dp))
         }
     }

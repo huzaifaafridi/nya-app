@@ -1,5 +1,13 @@
 package com.nya.app.ui
 
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,10 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nya.app.ui.theme.LocalNya
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 object SubNav {
     var open: (String) -> Unit = {}
@@ -23,8 +37,73 @@ object SubNav {
     var signOut: () -> Unit = {}
 }
 
+private val Context.userStore by preferencesDataStore("user")
+
+// Prefs below live in Compose state for instant reads; every change is also persisted here.
+private object Store {
+    val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    var data: DataStore<Preferences>? = null
+
+    fun save(block: (MutablePreferences) -> Unit) {
+        val s = data ?: return
+        io.launch { s.edit(block) }
+    }
+}
+
+// Call once before the first frame so saved values (especially the theme) apply immediately.
+suspend fun loadPrefs(context: Context) {
+    val s = context.applicationContext.userStore
+    Store.data = s
+    val p = runCatching { s.data.first() }.getOrNull() ?: return
+    ThemePref.load(p)
+    UserPref.load(p)
+}
+
 object ThemePref {
-    var mode by mutableStateOf(0) // 0 = Auto, 1 = Light, 2 = Dark
+    private val THEME = intPreferencesKey("theme")
+
+    private var _mode by mutableStateOf(0) // 0 = Auto, 1 = Light, 2 = Dark
+    var mode: Int
+        get() = _mode
+        set(v) { _mode = v; Store.save { it[THEME] = v } }
+
+    fun load(p: Preferences) { p[THEME]?.let { _mode = it } }
+}
+
+object UserPref {
+    private val MODE = intPreferencesKey("mode")
+    private val QUIET = booleanPreferencesKey("quiet")
+    private val COMPANION = intPreferencesKey("companion")
+    private val SKIN = intPreferencesKey("skin")
+
+    var name by mutableStateOf("Mercy")
+
+    private var _mode by mutableStateOf(2) // 0 = Travel, 1 = Focus, 2 = Wellness, 3 = Creator
+    var mode: Int
+        get() = _mode
+        set(v) { _mode = v; Store.save { it[MODE] = v } }
+
+    private var _quiet by mutableStateOf(false)
+    var quiet: Boolean
+        get() = _quiet
+        set(v) { _quiet = v; Store.save { it[QUIET] = v } }
+
+    private var _companion by mutableStateOf(Companion.Muse)
+    var companion: Companion
+        get() = _companion
+        set(v) { _companion = v; Store.save { it[COMPANION] = v.ordinal } }
+
+    private var _skin by mutableStateOf(DefaultSkin)
+    var skin: Color
+        get() = _skin
+        set(v) { _skin = v; Store.save { it[SKIN] = v.toArgb() } }
+
+    fun load(p: Preferences) {
+        p[MODE]?.let { _mode = it }
+        p[QUIET]?.let { _quiet = it }
+        p[COMPANION]?.let { i -> Companion.entries.getOrNull(i)?.let { _companion = it } }
+        p[SKIN]?.let { _skin = Color(it) }
+    }
 }
 
 val NyaGreen = Color(0xFF6BCB8B)
@@ -37,7 +116,7 @@ fun XTop(title: String, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text("‹", color = c.tx, fontSize = 30.sp,
-            modifier = Modifier.clickable { onBack() }.padding(end = 16.dp))
+            modifier = Modifier.pressScale { onBack() }.padding(end = 16.dp))
         Text(title, color = c.tx, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -46,9 +125,8 @@ fun XTop(title: String, onBack: () -> Unit) {
 fun XBtn(text: String, onClick: () -> Unit, modifier: Modifier = Modifier.fillMaxWidth()) {
     val c = LocalNya.current
     Box(
-        modifier.height(54.dp).clip(RoundedCornerShape(27.dp))
-            .background(Brush.horizontalGradient(listOf(c.b1, c.b2)))
-            .clickable { onClick() },
+        modifier.height(54.dp).pressScale { onClick() }.clip(RoundedCornerShape(27.dp))
+            .background(Brush.horizontalGradient(listOf(c.b1, c.b2))),
         contentAlignment = Alignment.Center
     ) { Text(text, color = c.on, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
 }
@@ -58,7 +136,7 @@ fun XGhost(text: String, onClick: () -> Unit, modifier: Modifier = Modifier.fill
     val c = LocalNya.current
     val shape = RoundedCornerShape(27.dp)
     Box(
-        modifier.height(54.dp).clip(shape).border(1.dp, c.ln, shape).clickable { onClick() },
+        modifier.height(54.dp).pressScale { onClick() }.clip(shape).border(1.dp, c.ln, shape),
         contentAlignment = Alignment.Center
     ) { Text(text, color = c.tx, fontSize = 16.sp) }
 }
@@ -71,8 +149,9 @@ fun XCard(
 ) {
     val c = LocalNya.current
     val shape = RoundedCornerShape(20.dp)
-    var m = modifier.fillMaxWidth().clip(shape).background(c.sf).border(1.dp, c.ln, shape)
-    if (onClick != null) m = m.clickable { onClick() }
+    var m = modifier.fillMaxWidth()
+    if (onClick != null) m = m.pressScale { onClick() }
+    m = m.clip(shape).background(c.sf).border(1.dp, c.ln, shape)
     Column(m.padding(18.dp), content = content)
 }
 
@@ -86,7 +165,7 @@ fun XDivider() {
 fun XRow(title: String, value: String = "", onClick: (() -> Unit)? = null) {
     val c = LocalNya.current
     var m = Modifier.fillMaxWidth()
-    if (onClick != null) m = m.clickable { onClick() }
+    if (onClick != null) m = m.pressScale { onClick() }
     Row(m.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = c.tx, fontSize = 15.sp, modifier = Modifier.weight(1f))
         if (value.isNotEmpty()) Text(value, color = c.sb, fontSize = 14.sp)
@@ -117,10 +196,10 @@ fun XToggle(title: String, sub: String, checked: Boolean, onChange: (Boolean) ->
 }
 
 @Composable
-fun XLabel(text: String) {
+fun XLabel(text: String, modifier: Modifier = Modifier) {
     val c = LocalNya.current
     Text(text, color = c.ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 24.dp, bottom = 10.dp))
+        modifier = modifier.padding(top = 24.dp, bottom = 10.dp))
 }
 
 @Composable

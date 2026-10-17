@@ -3,7 +3,6 @@ package com.nya.app.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -46,8 +45,8 @@ fun Heading(text: String) {
 fun SocialCircle(content: @Composable () -> Unit) {
     val c = LocalNya.current
     Box(
-        Modifier.size(54.dp).clip(CircleShape).background(c.sf)
-            .border(1.dp, c.ln, CircleShape).clickable { },
+        Modifier.size(54.dp).pressScale { }.clip(CircleShape).background(c.sf)
+            .border(1.dp, c.ln, CircleShape),
         contentAlignment = Alignment.Center
     ) { content() }
 }
@@ -68,11 +67,11 @@ fun SocialRow() {
         }
         Image(
             painterResource(if (dark) R.drawable.ic_google_dark else R.drawable.ic_google_light),
-            "Google", Modifier.size(54.dp).clip(CircleShape).clickable { }
+            "Google", Modifier.size(54.dp).pressScale { }.clip(CircleShape)
         )
         Image(
             painterResource(R.drawable.ic_facebook),
-            "Facebook", Modifier.size(54.dp).clip(CircleShape).clickable { }
+            "Facebook", Modifier.size(54.dp).pressScale { }.clip(CircleShape)
         )
     }
 }
@@ -112,12 +111,12 @@ fun SignInScreen(onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit)
         Spacer(Modifier.height(16.dp))
         NyaField("Password", pass, { pass = it }, password = true)
         Text("Forgot password?", color = c.ac, fontSize = 13.sp,
-            modifier = Modifier.padding(top = 12.dp).clickable(onClick = onForgot))
+            modifier = Modifier.padding(top = 12.dp).pressScale(onClick = onForgot))
         Spacer(Modifier.height(24.dp))
         NyaButton("Sign in", onHome)
         SocialRow()
         Text("New here? Create account", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).clickable(onClick = onSignUp))
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignUp))
     }
 }
 
@@ -150,7 +149,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
         NyaButton("Create account", onVerify)
         SocialRow()
         Text("Already have an account? Sign in", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).clickable(onClick = onSignIn))
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignIn))
     }
 }
 
@@ -163,8 +162,9 @@ fun GreetingScreen(name: String, onDone: () -> Unit) {
             Box(Modifier.size(90.dp).clip(CircleShape)
                 .background(Brush.radialGradient(listOf(c.b1, c.b2, c.sf))))
             Spacer(Modifier.height(24.dp))
-            Text("Welcome", color = c.sb, fontSize = 16.sp, letterSpacing = 2.sp)
-            Text(name, color = c.tx, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 44.sp)
+            Text("Welcome", color = c.sb, fontSize = 16.sp, letterSpacing = 2.sp, modifier = Modifier.staggerIn(1))
+            Text(name, color = c.tx, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 44.sp,
+                modifier = Modifier.staggerIn(3))
         }
     }
 }

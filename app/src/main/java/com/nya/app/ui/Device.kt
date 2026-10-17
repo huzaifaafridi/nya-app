@@ -5,7 +5,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,9 +35,10 @@ fun DeviceScreen() {
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 120.dp)
     ) {
-        Text("Device", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+        Text("Device", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
+            modifier = Modifier.staggerIn(0))
         Spacer(Modifier.height(20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically) {
             NyaOrb(84.dp) { NyaIcon(NyaIcons.Device, tint = c.ac, iconSize = 44.dp, strokeW = 1.2f) }
             Spacer(Modifier.width(20.dp))
             Column {
@@ -44,14 +52,14 @@ fun DeviceScreen() {
         }
 
         Spacer(Modifier.height(22.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("BATTERY", "82%", .82f, Modifier.weight(1f))
-            StatCard("STORAGE", "4.1 of 16 GB", .26f, Modifier.weight(1f))
+        Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatCard("BATTERY", "82%", .82f, Modifier.weight(1f), delayMs = 2 * Motion.STAGGER)
+            StatCard("STORAGE", "4.1 of 16 GB", .26f, Modifier.weight(1f), delayMs = 3 * Motion.STAGGER)
         }
 
         Spacer(Modifier.height(10.dp))
         Row(
-            Modifier.fillMaxWidth().clip(card).background(c.sf).border(1.dp, c.ac, card).padding(16.dp),
+            Modifier.fillMaxWidth().staggerIn(3).clip(card).background(c.sf).border(1.dp, c.ac, card).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NyaIcon(NyaIcons.Download, tint = c.ac)
@@ -67,7 +75,7 @@ fun DeviceScreen() {
         }
 
         Spacer(Modifier.height(10.dp))
-        Column(Modifier.fillMaxWidth().clip(card).background(c.sf).border(1.dp, c.ln, card)) {
+        Column(Modifier.fillMaxWidth().staggerIn(4).clip(card).background(c.sf).border(1.dp, c.ln, card)) {
             DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
             Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
             DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { }
@@ -80,14 +88,27 @@ fun DeviceScreen() {
 }
 
 @Composable
-private fun StatCard(label: String, value: String, frac: Float, modifier: Modifier) {
+private fun StatCard(label: String, value: String, frac: Float, modifier: Modifier, delayMs: Long = 0) {
     val c = LocalNya.current
     val card = RoundedCornerShape(22.dp)
+    // bar fills from 0 on first show; read in the layout phase so it never recomposes
+    val reduce = LocalReduceMotion.current
+    val fill = remember { Animatable(if (reduce) frac else 0f) }
+    LaunchedEffect(frac) {
+        if (reduce) fill.snapTo(frac)
+        else { delay(delayMs); fill.animateTo(frac, motionTween(Motion.LONG)) }
+    }
     Column(modifier.clip(card).background(c.sf).border(1.dp, c.ln, card).padding(horizontal = 16.dp, vertical = 14.dp)) {
         Text(label, color = c.sb, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Medium)
         Text(value, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
         Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(5.dp).clip(CircleShape).background(c.ln)) {
-            Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(CircleShape)
+            Box(Modifier
+                .layout { m, cs ->
+                    val w = (cs.maxWidth * fill.value).roundToInt()
+                    val p = m.measure(Constraints.fixed(w, cs.maxHeight))
+                    layout(w, cs.maxHeight) { p.place(0, 0) }
+                }
+                .clip(CircleShape)
                 .background(Brush.horizontalGradient(listOf(c.b2, c.b1))))
         }
     }
@@ -98,7 +119,7 @@ private fun DevRow(icon: String, label: String, chevron: Boolean = false, danger
     val c = LocalNya.current
     val col = if (danger) Color(0xFFE5736A) else c.tx
     Row(
-        Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 16.dp),
+        Modifier.fillMaxWidth().pressScale { onClick() }.padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         NyaIcon(icon, tint = col, iconSize = 22.dp)

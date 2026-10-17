@@ -2,12 +2,14 @@ package com.nya.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nya.app.ui.theme.LocalNya
@@ -40,9 +43,11 @@ fun NyaThumb(
     modifier: Modifier = Modifier,
     badge: String? = null,
     play: Boolean = false,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    index: Int = 0
 ) {
-    val base = modifier.clip(RoundedCornerShape(18.dp))
+    val base = modifier.popIn(index).then(if (onClick != null) Modifier.pressScale { onClick() } else Modifier)
+        .clip(RoundedCornerShape(18.dp))
         .background(Brush.verticalGradient(colorStops = scene.stops()))
         .drawBehind {
             // sun / light spot
@@ -55,7 +60,7 @@ fun NyaThumb(
                 listOf(Color(0x66FFD7A0), Color.Transparent),
                 center = Offset(size.width * cx, size.height * cy), radius = size.width * .55f))
         }
-    Box(if (onClick != null) base.clickable { onClick() } else base) {
+    Box(base) {
         if (play) Box(
             Modifier.align(Alignment.Center).size(44.dp).clip(CircleShape)
                 .background(Color(0x80000000)).border(1.dp, Color(0xCCFFFFFF), CircleShape),
@@ -72,29 +77,32 @@ fun NyaThumb(
 
 /** filter chip with the glowing ring when active */
 @Composable
-fun NyaChip(text: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun NyaChip(text: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, hPad: Dp = 16.dp) {
     val c = LocalNya.current
     val shape = RoundedCornerShape(19.dp)
+    val ring by animateFloatAsState(if (on) .22f else 0f, motionSpec(), label = "ring")
+    val line by animateColorAsState(if (on) c.ac else c.ln, motionSpec(), label = "line")
+    val ink by animateColorAsState(if (on) c.ac else c.tx, motionSpec(), label = "ink")
     Box(
         modifier
-            .then(if (on) Modifier.border(3.dp, c.ac.copy(alpha = .22f), RoundedCornerShape(22.dp)).padding(3.dp) else Modifier.padding(3.dp))
+            .pressScale { onClick() }
+            .border(3.dp, c.ac.copy(alpha = ring), RoundedCornerShape(22.dp)).padding(3.dp)
             .height(38.dp).clip(shape)
-            .background(if (on) c.sf else c.sf)
-            .border(1.dp, if (on) c.ac else c.ln, shape)
-            .clickable { onClick() }.padding(horizontal = 16.dp),
+            .background(c.sf)
+            .border(1.dp, line, shape)
+            .padding(horizontal = hPad),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = if (on) c.ac else c.tx, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(text, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
     }
 }
 
 /** Home hero card: sea photo with text on a dark fade */
 @Composable
-fun HomeHero(title: String, sub: String, onClick: () -> Unit) {
+fun HomeHero(title: String, sub: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        Modifier.fillMaxWidth().height(156.dp).clip(RoundedCornerShape(24.dp))
+        modifier.fillMaxWidth().height(156.dp).pressScale { onClick() }.clip(RoundedCornerShape(24.dp))
             .background(Brush.verticalGradient(colorStops = Scene.Sea.stops()))
-            .clickable { onClick() }
     ) {
         Box(Modifier.matchParentSize().background(
             Brush.verticalGradient(listOf(Color(0x0D000000), Color(0xCC080605)))))
@@ -108,28 +116,28 @@ fun HomeHero(title: String, sub: String, onClick: () -> Unit) {
 
 /** Home: row of 3 recent memories */
 @Composable
-fun RecentRow(onOpen: () -> Unit) {
+fun RecentRow(onOpen: () -> Unit, start: Int = 0) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        listOf(Scene.Sea, Scene.Forest, Scene.Dusk).forEach {
-            NyaThumb(it, Modifier.weight(1f).height(84.dp), onClick = onOpen)
+        listOf(Scene.Sea, Scene.Forest, Scene.Dusk).forEachIndexed { i, s ->
+            NyaThumb(s, Modifier.weight(1f).height(84.dp), onClick = onOpen, index = start + i)
         }
     }
 }
 
 /** Memories: the masonry grid from the design */
 @Composable
-fun MemoriesGrid(onOpen: () -> Unit) {
+fun MemoriesGrid(onOpen: () -> Unit, start: Int = 0) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            NyaThumb(Scene.Sea, Modifier.weight(1f).height(190.dp), "Clip · 0:08", true, onOpen)
+            NyaThumb(Scene.Sea, Modifier.weight(1f).height(190.dp), "Clip · 0:08", true, onOpen, start)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                NyaThumb(Scene.Mount, Modifier.fillMaxWidth().height(90.dp), "Photo", false, onOpen)
-                NyaThumb(Scene.Dusk, Modifier.fillMaxWidth().height(90.dp), "Photo", false, onOpen)
+                NyaThumb(Scene.Mount, Modifier.fillMaxWidth().height(90.dp), "Photo", false, onOpen, start + 1)
+                NyaThumb(Scene.Dusk, Modifier.fillMaxWidth().height(90.dp), "Photo", false, onOpen, start + 2)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            NyaThumb(Scene.Forest, Modifier.weight(1f).height(130.dp), "Clip · 0:06", true, onOpen)
-            NyaThumb(Scene.Yoga, Modifier.weight(1f).height(130.dp), "Photo", false, onOpen)
+            NyaThumb(Scene.Forest, Modifier.weight(1f).height(130.dp), "Clip · 0:06", true, onOpen, start + 3)
+            NyaThumb(Scene.Yoga, Modifier.weight(1f).height(130.dp), "Photo", false, onOpen, start + 4)
         }
     }
 }

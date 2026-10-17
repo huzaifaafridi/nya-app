@@ -2,7 +2,6 @@ package com.nya.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -22,8 +21,8 @@ import com.nya.app.ui.theme.LocalNya
 fun NyaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = LocalNya.current
     Box(
-        modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp))
-            .background(Brush.verticalGradient(listOf(c.b1, c.b2))).clickable(onClick = onClick),
+        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = onClick).clip(RoundedCornerShape(27.dp))
+            .background(Brush.verticalGradient(listOf(c.b1, c.b2))),
         contentAlignment = Alignment.Center
     ) { Text(text, color = c.on, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
 }
@@ -33,8 +32,8 @@ fun NyaOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Mod
     val c = LocalNya.current
     val shape = RoundedCornerShape(27.dp)
     Box(
-        modifier.fillMaxWidth().height(54.dp).clip(shape).background(c.sf)
-            .border(1.dp, c.ln, shape).clickable(onClick = onClick),
+        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = onClick).clip(shape).background(c.sf)
+            .border(1.dp, c.ln, shape),
         contentAlignment = Alignment.Center
     ) { Text(text, color = c.tx, fontWeight = FontWeight.Medium, fontSize = 14.sp) }
 }

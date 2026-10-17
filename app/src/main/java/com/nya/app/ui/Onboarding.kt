@@ -18,8 +18,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -37,9 +35,9 @@ fun Chip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifie
     val c = LocalNya.current
     val shape = RoundedCornerShape(20.dp)
     Box(
-        modifier.height(42.dp).clip(shape)
+        modifier.height(42.dp).pressScale(onClick = onClick).clip(shape)
             .background(if (selected) c.ac else c.sf)
-            .border(1.dp, if (selected) c.ac else c.ln, shape).clickable(onClick = onClick),
+            .border(1.dp, if (selected) c.ac else c.ln, shape),
         contentAlignment = Alignment.Center
     ) { Text(text, color = if (selected) c.on else c.tx, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
 }
@@ -83,7 +81,7 @@ fun VerifyScreen(onVerified: () -> Unit) {
         Spacer(Modifier.height(28.dp))
         NyaButton("Verify", onVerified)
         Text("Didn't get it? Resend code", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).clickable { })
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale { })
     }
 }
 
@@ -124,16 +122,16 @@ fun CompanionScreen(onContinue: () -> Unit) {
         items.forEachIndexed { i, (name, desc) ->
             val shape = RoundedCornerShape(20.dp)
             Row(
-                Modifier.fillMaxWidth().padding(bottom = 12.dp).clip(shape).background(c.sf)
+                Modifier.fillMaxWidth().padding(bottom = 12.dp).pressScale { sel = i }.clip(shape).background(c.sf)
                     .border(if (i == sel) 2.dp else 1.dp, if (i == sel) c.ac else c.ln, shape)
-                    .clickable { sel = i }.padding(16.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     Modifier.size(48.dp).clip(CircleShape)
                         .background(Brush.radialGradient(listOf(c.b1, c.b2))),
                     contentAlignment = Alignment.Center
-                ) { Text(name.take(1), color = c.on, fontSize = 20.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic) }
+                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], UserPref.skin) }
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Text(name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -142,7 +140,7 @@ fun CompanionScreen(onContinue: () -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        NyaButton("Continue", onContinue)
+        NyaButton("Continue", { UserPref.companion = Companion.entries[sel]; onContinue() })
     }
 }
 
@@ -162,7 +160,7 @@ fun AvatarScreen(onContinue: () -> Unit) {
                 .background(Brush.verticalGradient(listOf(c.sf, c.bg))).border(1.dp, c.ln, shape),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
         ) {
-            Box(Modifier.size(130.dp).clip(CircleShape).background(Color(skins[skin])))
+            NyaOrb(130.dp) { Avatar2D(Modifier.fillMaxSize(), UserPref.companion, Color(skins[skin])) }
             Spacer(Modifier.height(16.dp))
             Text("3D preview: drag to rotate", color = c.sb, fontSize = 12.sp)
         }
@@ -172,9 +170,8 @@ fun AvatarScreen(onContinue: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             skins.forEachIndexed { i, col ->
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(Color(col))
+                    Modifier.size(44.dp).pressScale { skin = i }.clip(CircleShape).background(Color(col))
                         .border(if (i == skin) 3.dp else 1.dp, if (i == skin) c.ac else c.ln, CircleShape)
-                        .clickable { skin = i }
                 )
             }
         }
@@ -187,7 +184,7 @@ fun AvatarScreen(onContinue: () -> Unit) {
             }
         }
         Spacer(Modifier.height(32.dp))
-        NyaButton("Continue", onContinue)
+        NyaButton("Continue", { UserPref.skin = Color(skins[skin]); onContinue() })
     }
 }
 

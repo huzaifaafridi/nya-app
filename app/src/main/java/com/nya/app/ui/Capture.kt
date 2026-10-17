@@ -68,10 +68,9 @@ fun CaptureScreen(onBack: (() -> Unit)? = null) {
                 val sel = mode == i
                 val shape = RoundedCornerShape(20.dp)
                 Box(
-                    Modifier.clip(shape)
+                    Modifier.pressScale { if (!rec) mode = i }.clip(shape)
                         .background(if (sel) c.ac else c.sf)
                         .border(1.dp, if (sel) c.ac else c.ln, shape)
-                        .clickable { if (!rec) mode = i }
                         .padding(horizontal = 18.dp, vertical = 8.dp)
                 ) { Text(label, color = if (sel) c.on else c.sb, fontSize = 14.sp) }
             }
@@ -94,13 +93,13 @@ fun CaptureScreen(onBack: (() -> Unit)? = null) {
             )
             Box(
                 Modifier.size(if (rec) 70.dp else 112.dp)
-                    .clip(if (rec) RoundedCornerShape(18.dp) else CircleShape)
-                    .background(Brush.linearGradient(listOf(c.b1, c.b2)))
-                    .clickable {
+                    .pressScale {
                         if (mode == 0) saved++
                         else if (rec) { rec = false; saved++ }
                         else rec = true
                     }
+                    .clip(if (rec) RoundedCornerShape(18.dp) else CircleShape)
+                    .background(Brush.linearGradient(listOf(c.b1, c.b2)))
             )
         }
 

@@ -39,9 +39,9 @@ fun SubscriptionScreen(onBack: () -> Unit) {
                 val shape = RoundedCornerShape(20.dp)
                 val on = sel == i
                 Column(
-                    Modifier.padding(bottom = 14.dp).fillMaxWidth().clip(shape)
+                    Modifier.padding(bottom = 14.dp).fillMaxWidth().pressScale { sel = i }.clip(shape)
                         .background(c.sf).border(if (on) 2.dp else 1.dp, if (on) c.ac else c.ln, shape)
-                        .clickable { sel = i }.padding(20.dp)
+                        .padding(20.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(p.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
