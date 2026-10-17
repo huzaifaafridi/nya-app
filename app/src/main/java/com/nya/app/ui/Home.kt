@@ -19,12 +19,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.AppViewModel
+import com.nya.app.viewmodel.MemoriesViewModel
 import java.util.Calendar
 
 object Nav { var toChat: () -> Unit = {} }
@@ -107,6 +111,9 @@ private fun NavItem(t: Tab, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun HomeScreen(onSeeAll: () -> Unit) {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
+    val items by viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory).memories.collectAsState()
     val greet = remember { !homeGreeted }
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -120,18 +127,20 @@ fun HomeScreen(onSeeAll: () -> Unit) {
         Row(Modifier.fillMaxWidth().staggerIn(0), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(greeting(), color = c.sb, fontSize = 13.sp)
-                Text(UserPref.name, color = c.tx, fontSize = 30.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+                Text(prefs.name, color = c.tx, fontSize = 30.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
             Box(Modifier.size(46.dp).breathe().pressScale { SubNav.open("Settings") }.clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2))))
         }
 
         Spacer(Modifier.height(22.dp))
-        HomeHero("Sunset at the pier", "Latest memory · 2 hours ago", onClick = { MemNav.open(0) }, modifier = Modifier.staggerIn(1))
+        items.firstOrNull()?.let {
+            HomeHero(it.scene, it.title, "Latest memory · ${it.time}", onClick = { MemNav.open(it.id) }, modifier = Modifier.staggerIn(1))
+        }
 
         Spacer(Modifier.height(20.dp))
         Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             listOf("Travel", "Focus", "Wellness", "Creator").forEachIndexed { i, t ->
-                NyaChip(t, UserPref.mode == i, { UserPref.mode = i }, Modifier.weight(1f), hPad = 6.dp)
+                NyaChip(t, prefs.mode == i, { app.setMode(i) }, Modifier.weight(1f), hPad = 6.dp)
             }
         }
 
@@ -148,7 +157,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
                 Text("Silences voice replies only", color = c.sb, fontSize = 13.sp)
             }
             Switch(
-                checked = UserPref.quiet, onCheckedChange = { UserPref.quiet = it },
+                checked = prefs.quiet, onCheckedChange = { app.setQuiet(it) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = c.on, checkedTrackColor = c.ac,
                     uncheckedThumbColor = c.sb, uncheckedTrackColor = c.bg
@@ -164,12 +173,12 @@ fun HomeScreen(onSeeAll: () -> Unit) {
         ) {
             // tapping the avatar says hello instead of opening Chat
             Box(Modifier.pressScale {
-                val voice = VoiceEngine.chosen
-                if (!UserPref.quiet && voice != null) VoiceEngine.speak("Hello, ${UserPref.name}!", voice)
+                val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
+                if (!prefs.quiet && voice != null) VoiceEngine.speak("Hello, ${prefs.name}!", voice)
             }) {
                 NyaOrb(56.dp) {
                     Avatar2D(
-                        Modifier.fillMaxSize(), UserPref.companion, UserPref.skin, UserPref.gender,
+                        Modifier.fillMaxSize(), prefs.companion, Color(prefs.skin), prefs.gender,
                         if (VoiceEngine.speaking) AvatarState.Speaking else AvatarState.Idle,
                         greet = greet, mouth = VoiceEngine.mouth
                     )
@@ -189,6 +198,6 @@ fun HomeScreen(onSeeAll: () -> Unit) {
             Text("See all", color = c.ac, fontSize = 13.sp, modifier = Modifier.pressScale { onSeeAll() })
         }
         Spacer(Modifier.height(10.dp))
-        RecentRow(onOpen = { MemNav.open(0) }, start = 6)
+        RecentRow(items, { MemNav.open(it) }, start = 6)
     }
 }

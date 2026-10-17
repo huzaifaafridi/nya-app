@@ -10,6 +10,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.nya.app.data.Gender
 import java.util.Locale
 import kotlin.concurrent.thread
 
@@ -44,10 +45,11 @@ object VoiceEngine {
     /** true while a word is being spoken, closed between words; read it in the draw phase only */
     val mouth: State<Boolean> = mouthState
 
-    /** the 4 styles for the saved gender */
-    val options: List<VoiceOption> get() = byGender[UserPref.gender].orEmpty()
+    /** the 4 styles for a gender */
+    fun options(gender: Gender): List<VoiceOption> = byGender[gender].orEmpty()
 
-    val chosen: VoiceOption? get() = options.getOrNull(UserPref.voice) ?: options.firstOrNull()
+    fun chosen(gender: Gender, voice: Int): VoiceOption? =
+        options(gender).let { it.getOrNull(voice) ?: it.firstOrNull() }
 
     @Volatile private var openMs = 110L
 

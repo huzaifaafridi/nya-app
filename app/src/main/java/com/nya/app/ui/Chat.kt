@@ -23,46 +23,37 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
-
-data class Msg(val text: String, val mine: Boolean)
-
-val fakeReplies = listOf(
-    "Got it. Want me to save that as a memory?",
-    "That sounds like a good moment. I can pull up similar ones from this week.",
-    "I'm here. Tell me more.",
-    "Noted. I'll remind you tomorrow morning."
-)
 
 @Composable
 fun ChatScreen(onBack: () -> Unit) {
     val c = LocalNya.current
-    val msgs = remember { mutableStateListOf(Msg("Hey, I'm here. What's on your mind?", false)) }
+    val prefs = LocalPrefs.current
+    val vm = viewModel<ChatViewModel>(factory = ChatViewModel.Factory)
+    val msgs by vm.messages.collectAsState()
+    val typing by vm.typing.collectAsState()
     var input by remember { mutableStateOf("") }
-    var typing by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
     val shown = remember { mutableSetOf<Int>() }
+    // messages already there when the screen opened are neither animated nor spoken again
+    val opened = remember { msgs.size }
 
     fun send(t: String = input) {
         if (t.isNotBlank()) {
-            msgs.add(Msg(t.trim(), true))
+            vm.send(t)
             input = ""
         }
     }
 
-    // fake Nya reply (replace with Gemini call later)
     LaunchedEffect(msgs.size) {
         speaking = false
-        if (msgs.isNotEmpty() && msgs.last().mine) {
-            typing = true
-            delay(1200)
-            typing = false
-            msgs.add(Msg(fakeReplies.random(), false))
-        } else if (msgs.size > 1) {
-            val voice = VoiceEngine.chosen
-            if (!UserPref.quiet && voice != null) VoiceEngine.speak(msgs.last().text, voice)
+        if (msgs.size > maxOf(opened, 1) && !msgs.last().mine) {
+            val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
+            if (!prefs.quiet && voice != null) VoiceEngine.speak(msgs.last().text, voice)
             else {
                 speaking = true
                 delay(1600)
@@ -99,7 +90,7 @@ fun ChatScreen(onBack: () -> Unit) {
         ) {
             itemsIndexed(msgs) { i, m ->
                 // animate each message once, when it first arrives (not when scrolled back into view)
-                val fresh = remember { shown.add(i) }
+                val fresh = remember { shown.add(i) && (i >= opened || opened <= 1) }
                 Box(Modifier.staggerIn(0, animate = fresh)) {
                     if (m.mine) UserBubble(m.text) else AiBubble(m.text)
                 }

@@ -5,19 +5,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.MemoriesViewModel
 
 @Composable
 fun ReadOnlyScreen(onBack: () -> Unit) {
     val c = LocalNya.current
+    val vm = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
+    val memories by vm.memories.collectAsState()
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Memories", onBack)
         Column(Modifier.padding(horizontal = 20.dp)) {
@@ -37,7 +42,7 @@ fun ReadOnlyScreen(onBack: () -> Unit) {
                 ) {
                     Box(
                         Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
-                            .background(Brush.verticalGradient(listOf(m.a, m.b)))
+                            .background(m.scene.brush())
                     )
                     Spacer(Modifier.width(14.dp))
                     Column {

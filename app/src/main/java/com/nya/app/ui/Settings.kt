@@ -18,11 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.AppViewModel
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     var notifs by remember { mutableStateOf(true) }
     val seg = RoundedCornerShape(16.dp)
 
@@ -37,10 +41,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                         Modifier.size(52.dp).clip(CircleShape)
                             .background(Brush.linearGradient(listOf(c.b1, c.b2))),
                         contentAlignment = Alignment.Center
-                    ) { Text(UserPref.name.take(1), color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(prefs.name.take(1), color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text(UserPref.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text(prefs.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         Text("Free plan", color = c.sb, fontSize = 13.sp)
                     }
                 }
@@ -51,9 +55,9 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Modifier.fillMaxWidth().staggerIn(2).clip(seg).background(c.sf).border(1.dp, c.ln, seg).padding(4.dp)
             ) {
                 listOf("Auto", "Light", "Dark").forEachIndexed { i, label ->
-                    val sel = ThemePref.mode == i
+                    val sel = prefs.theme == i
                     Box(
-                        Modifier.weight(1f).pressScale { ThemePref.mode = i }.clip(RoundedCornerShape(12.dp))
+                        Modifier.weight(1f).pressScale { app.setTheme(i) }.clip(RoundedCornerShape(12.dp))
                             .background(if (sel) c.ac else Color.Transparent)
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
@@ -65,7 +69,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             XCard(Modifier.staggerIn(4)) {
                 XToggle("Notifications", "Memory and device alerts", notifs) { notifs = it }
                 XDivider()
-                XToggle("Quiet mode", "Pause voice replies", UserPref.quiet) { UserPref.quiet = it }
+                XToggle("Quiet mode", "Pause voice replies", prefs.quiet) { app.setQuiet(it) }
             }
 
             XLabel("Account", Modifier.staggerIn(5))

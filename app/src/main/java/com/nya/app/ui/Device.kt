@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.layout
@@ -20,7 +22,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.DeviceViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
@@ -30,6 +34,7 @@ import androidx.compose.ui.text.font.FontStyle
 @Composable
 fun DeviceScreen() {
     val c = LocalNya.current
+    val device by viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory).device.collectAsState()
     val card = RoundedCornerShape(22.dp)
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
@@ -37,52 +42,56 @@ fun DeviceScreen() {
     ) {
         Text("Device", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
             modifier = Modifier.staggerIn(0))
-        Spacer(Modifier.height(20.dp))
-        Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically) {
-            NyaOrb(84.dp) { NyaIcon(NyaIcons.Device, tint = c.ac, iconSize = 44.dp, strokeW = 1.2f) }
-            Spacer(Modifier.width(20.dp))
-            Column {
-                Text("NYA F1", color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF5BC98A)))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Connected · Wi-Fi and Bluetooth", color = c.sb, fontSize = 13.sp)
+        device?.let { d ->
+            Spacer(Modifier.height(20.dp))
+            Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically) {
+                NyaOrb(84.dp) { NyaIcon(NyaIcons.Device, tint = c.ac, iconSize = 44.dp, strokeW = 1.2f) }
+                Spacer(Modifier.width(20.dp))
+                Column {
+                    Text(d.name, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF5BC98A)))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Connected · ${d.link}", color = c.sb, fontSize = 13.sp)
+                    }
                 }
             }
-        }
 
-        Spacer(Modifier.height(22.dp))
-        Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard("BATTERY", "82%", .82f, Modifier.weight(1f), delayMs = 2 * Motion.STAGGER)
-            StatCard("STORAGE", "4.1 of 16 GB", .26f, Modifier.weight(1f), delayMs = 3 * Motion.STAGGER)
-        }
-
-        Spacer(Modifier.height(10.dp))
-        Row(
-            Modifier.fillMaxWidth().staggerIn(3).clip(card).background(c.sf).border(1.dp, c.ac, card).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NyaIcon(NyaIcons.Download, tint = c.ac)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Update available", color = c.tx, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text("Firmware 1.2.0 · you have 1.1.4", color = c.sb, fontSize = 13.sp)
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatCard("BATTERY", "${(d.battery * 100).roundToInt()}%", d.battery, Modifier.weight(1f), delayMs = 2 * Motion.STAGGER)
+                StatCard("STORAGE", "${d.storageUsedGb} of ${d.storageTotalGb.roundToInt()} GB", d.storageUsedGb / d.storageTotalGb, Modifier.weight(1f), delayMs = 3 * Motion.STAGGER)
             }
-            Text("Update", color = c.on, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clip(RoundedCornerShape(16.dp))
-                    .background(Brush.verticalGradient(listOf(c.b1, c.b2)))
-                    .padding(horizontal = 14.dp, vertical = 8.dp))
-        }
 
-        Spacer(Modifier.height(10.dp))
-        Column(Modifier.fillMaxWidth().staggerIn(4).clip(card).background(c.sf).border(1.dp, c.ln, card)) {
-            DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
-            DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
-            DevRow(NyaIcons.Refresh, "Reconnect") { }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
-            DevRow(NyaIcons.Trash, "Forget this device", danger = true) { SubNav.open("ReadOnly") }
+            d.latestFirmware?.let {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier.fillMaxWidth().staggerIn(3).clip(card).background(c.sf).border(1.dp, c.ac, card).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    NyaIcon(NyaIcons.Download, tint = c.ac)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Update available", color = c.tx, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Firmware $it · you have ${d.firmware}", color = c.sb, fontSize = 13.sp)
+                    }
+                    Text("Update", color = c.on, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                            .background(Brush.verticalGradient(listOf(c.b1, c.b2)))
+                            .padding(horizontal = 14.dp, vertical = 8.dp))
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Column(Modifier.fillMaxWidth().staggerIn(4).clip(card).background(c.sf).border(1.dp, c.ln, card)) {
+                DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
+                DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
+                DevRow(NyaIcons.Refresh, "Reconnect") { }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
+                DevRow(NyaIcons.Trash, "Forget this device", danger = true) { SubNav.open("ReadOnly") }
+            }
         }
     }
 }

@@ -9,10 +9,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import com.nya.app.data.Prefs
 import com.nya.app.ui.*
 import com.nya.app.ui.theme.NyaTheme
+import com.nya.app.viewmodel.AppViewModel
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 enum class Screen {
     Welcome, SignIn, SignUp, Verify, Reset, Companion, Avatar, Permissions, Pair, Greeting,Home,Chat ,Detail,Sub
@@ -27,12 +32,14 @@ data class Dest(val screen: Screen, val sub: String, val depth: Int) {
 }
 
 class MainActivity : ComponentActivity() {
+    private val app: AppViewModel by viewModels { AppViewModel.Factory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         lifecycleScope.launch {
-            loadPrefs(this@MainActivity)
-            showContent()
+            val first = app.prefs.filterNotNull().first()
+            showContent(first)
         }
     }
 
@@ -41,11 +48,12 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private fun showContent() {
+    private fun showContent(first: Prefs) {
         setContent {
-            NyaTheme(dark = when (ThemePref.mode) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
-                var s by remember { mutableStateOf(Screen.Welcome) }
-                var memIdx by remember { mutableStateOf(0) }
+            val prefs = app.prefs.collectAsState().value ?: first
+            NyaTheme(dark = when (prefs.theme) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
+                var s by remember { mutableStateOf(if (first.onboarded) Screen.Home else Screen.Welcome) }
+                var memId by remember { mutableStateOf("") }
                 var sub by remember { mutableStateOf("") }
                 val subStack = remember { mutableStateListOf<String>() }
                 Nav.toChat = { s = Screen.Chat }
@@ -55,12 +63,12 @@ class MainActivity : ComponentActivity() {
                     s = Screen.Sub
                 }
                 SubNav.home = { subStack.clear(); s = Screen.Home }
-                SubNav.signOut = { s = Screen.Welcome }
-                MemNav.open = { memIdx = it; s = Screen.Detail }
+                SubNav.signOut = { app.signOut(); subStack.clear(); s = Screen.Welcome }
+                MemNav.open = { memId = it; s = Screen.Detail }
                 val reduce = rememberReduceMotion()
                 val slide = with(LocalDensity.current) { 24.dp.roundToPx() }
                 val dest = Dest(s, if (s == Screen.Sub) sub else "", if (s == Screen.Sub) subStack.size else 0)
-                CompositionLocalProvider(LocalReduceMotion provides reduce) {
+                CompositionLocalProvider(LocalPrefs provides prefs, LocalReduceMotion provides reduce) {
                     AnimatedContent(
                         targetState = dest,
                         transitionSpec = { screenTransition(targetState.isAfter(initialState), slide, reduce) },
@@ -76,10 +84,10 @@ class MainActivity : ComponentActivity() {
                             Screen.Avatar -> AvatarScreen({ s = Screen.Permissions }, { s = Screen.Companion })
                             Screen.Permissions -> PermissionsScreen({ s = Screen.Pair }, { s = Screen.Avatar })
                             Screen.Pair -> PairScreen({ s = Screen.Greeting }, { s = Screen.Permissions })
-                            Screen.Greeting -> GreetingScreen(UserPref.name) { s = Screen.Home }
+                            Screen.Greeting -> GreetingScreen(prefs.name) { app.completeOnboarding(); s = Screen.Home }
                             Screen.Home -> MainTabs()
                             Screen.Chat -> ChatScreen(onBack = { s = Screen.Home })
-                            Screen.Detail -> MemoryDetailScreen(memIdx, onBack = { s = Screen.Home })
+                            Screen.Detail -> MemoryDetailScreen(memId, onBack = { s = Screen.Home })
                             Screen.Sub -> SubRouter(subName, onBack = {
                                 if (subStack.isNotEmpty()) sub = subStack.removeAt(subStack.lastIndex)
                                 else s = Screen.Home

@@ -1,13 +1,5 @@
 package com.nya.app.ui
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,16 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nya.app.data.Prefs
 import com.nya.app.ui.theme.LocalNya
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 object SubNav {
     var open: (String) -> Unit = {}
@@ -37,88 +24,7 @@ object SubNav {
     var signOut: () -> Unit = {}
 }
 
-private val Context.userStore by preferencesDataStore("user")
-
-// Prefs below live in Compose state for instant reads; every change is also persisted here.
-private object Store {
-    val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    var data: DataStore<Preferences>? = null
-
-    fun save(block: (MutablePreferences) -> Unit) {
-        val s = data ?: return
-        io.launch { s.edit(block) }
-    }
-}
-
-// Call once before the first frame so saved values (especially the theme) apply immediately.
-suspend fun loadPrefs(context: Context) {
-    val s = context.applicationContext.userStore
-    Store.data = s
-    val p = runCatching { s.data.first() }.getOrNull() ?: return
-    ThemePref.load(p)
-    UserPref.load(p)
-}
-
-object ThemePref {
-    private val THEME = intPreferencesKey("theme")
-
-    private var _mode by mutableStateOf(0) // 0 = Auto, 1 = Light, 2 = Dark
-    var mode: Int
-        get() = _mode
-        set(v) { _mode = v; Store.save { it[THEME] = v } }
-
-    fun load(p: Preferences) { p[THEME]?.let { _mode = it } }
-}
-
-object UserPref {
-    private val MODE = intPreferencesKey("mode")
-    private val QUIET = booleanPreferencesKey("quiet")
-    private val COMPANION = intPreferencesKey("companion")
-    private val SKIN = intPreferencesKey("skin")
-    private val VOICE = intPreferencesKey("voice")
-    private val GENDER = intPreferencesKey("gender")
-
-    var name by mutableStateOf("Mercy")
-
-    private var _mode by mutableStateOf(2) // 0 = Travel, 1 = Focus, 2 = Wellness, 3 = Creator
-    var mode: Int
-        get() = _mode
-        set(v) { _mode = v; Store.save { it[MODE] = v } }
-
-    private var _quiet by mutableStateOf(false)
-    var quiet: Boolean
-        get() = _quiet
-        set(v) { _quiet = v; Store.save { it[QUIET] = v } }
-
-    private var _companion by mutableStateOf(Companion.Muse)
-    var companion: Companion
-        get() = _companion
-        set(v) { _companion = v; Store.save { it[COMPANION] = v.ordinal } }
-
-    private var _skin by mutableStateOf(DefaultSkin)
-    var skin: Color
-        get() = _skin
-        set(v) { _skin = v; Store.save { it[SKIN] = v.toArgb() } }
-
-    private var _gender by mutableStateOf(Gender.Female)
-    var gender: Gender
-        get() = _gender
-        set(v) { _gender = v; Store.save { it[GENDER] = v.ordinal } }
-
-    private var _voice by mutableStateOf(0) // index into VoiceEngine.options
-    var voice: Int
-        get() = _voice
-        set(v) { _voice = v; Store.save { it[VOICE] = v } }
-
-    fun load(p: Preferences) {
-        p[MODE]?.let { _mode = it }
-        p[QUIET]?.let { _quiet = it }
-        p[COMPANION]?.let { i -> Companion.entries.getOrNull(i)?.let { _companion = it } }
-        p[SKIN]?.let { _skin = Color(it) }
-        p[VOICE]?.let { _voice = it }
-        p[GENDER]?.let { i -> Gender.entries.getOrNull(i)?.let { _gender = it } }
-    }
-}
+val LocalPrefs = compositionLocalOf { Prefs() }
 
 val NyaGreen = Color(0xFF6BCB8B)
 

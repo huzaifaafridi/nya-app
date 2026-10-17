@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -121,10 +122,11 @@ fun TypingBubble() {
 @Composable
 fun ChatHeader(onBack: () -> Unit, name: String, sub: String, state: AvatarState, mouth: State<Boolean>?) {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         IconBtn(NyaIcons.Back, onClick = onBack)
         Spacer(Modifier.width(12.dp))
-        NyaOrb(42.dp, glow = false) { Avatar2D(Modifier.size(40.dp), UserPref.companion, UserPref.skin, UserPref.gender, state, mouth = mouth) }
+        NyaOrb(42.dp, glow = false) { Avatar2D(Modifier.size(40.dp), prefs.companion, Color(prefs.skin), prefs.gender, state, mouth = mouth) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(name, color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

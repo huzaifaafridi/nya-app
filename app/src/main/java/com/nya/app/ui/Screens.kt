@@ -20,9 +20,11 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.R
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.ui.theme.NyaDark
+import com.nya.app.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
 @Composable
@@ -101,6 +103,7 @@ fun WelcomeScreen(onStart: () -> Unit, onSignIn: () -> Unit) {
 @Composable
 fun SignInScreen(onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit) {
     val c = LocalNya.current
+    val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     Page {
@@ -113,7 +116,7 @@ fun SignInScreen(onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit)
         Text("Forgot password?", color = c.ac, fontSize = 13.sp,
             modifier = Modifier.padding(top = 12.dp).pressScale(onClick = onForgot))
         Spacer(Modifier.height(24.dp))
-        NyaButton("Sign in", onHome)
+        NyaButton("Sign in", { auth.signIn(email, pass, onHome) })
         SocialRow()
         Text("New here? Create account", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignUp))
@@ -123,6 +126,7 @@ fun SignInScreen(onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit)
 @Composable
 fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
     val c = LocalNya.current
+    val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -146,7 +150,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
             Text("I agree to the Terms and Privacy Policy", color = c.tx, fontSize = 13.sp)
         }
         Spacer(Modifier.height(16.dp))
-        NyaButton("Create account", onVerify)
+        NyaButton("Create account", { auth.signUp(name, email, pass, onVerify) })
         SocialRow()
         Text("Already have an account? Sign in", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignIn))

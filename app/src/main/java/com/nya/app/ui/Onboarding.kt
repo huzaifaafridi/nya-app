@@ -19,6 +19,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +27,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.data.Companion
+import com.nya.app.data.Gender
+import com.nya.app.data.Prefs
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.AppViewModel
+import com.nya.app.viewmodel.AuthViewModel
 
 @Composable
 fun Para(text: String) {
@@ -43,6 +50,7 @@ private fun StepBack(onBack: () -> Unit) {
 @Composable
 fun VerifyScreen(onVerified: () -> Unit) {
     val c = LocalNya.current
+    val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
     var code by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -77,7 +85,7 @@ fun VerifyScreen(onVerified: () -> Unit) {
             }
         )
         Spacer(Modifier.height(28.dp))
-        NyaButton("Verify", onVerified)
+        NyaButton("Verify", { auth.verify(code, onVerified) })
         Text("Didn't get it? Resend code", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale { })
     }
@@ -85,6 +93,7 @@ fun VerifyScreen(onVerified: () -> Unit) {
 
 @Composable
 fun ResetScreen(onBack: () -> Unit) {
+    val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
     var email by remember { mutableStateOf("") }
     Page {
         Spacer(Modifier.height(40.dp))
@@ -94,7 +103,7 @@ fun ResetScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(28.dp))
         NyaField("Email", email, { email = it })
         Spacer(Modifier.height(24.dp))
-        NyaButton("Send reset link", onBack)
+        NyaButton("Send reset link", { auth.sendReset(email, onBack) })
         Spacer(Modifier.height(16.dp))
         NyaOutlineButton("Back to sign in", onBack)
     }
@@ -103,6 +112,8 @@ fun ResetScreen(onBack: () -> Unit) {
 @Composable
 fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     val items = listOf(
         "Wanderer" to "Curious about places and discoveries",
         "Muse" to "Style, taste and inspiration",
@@ -110,7 +121,7 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
         "Yogi" to "Mindful and steady",
         "Creator" to "Ideas and making things"
     )
-    var sel by remember { mutableStateOf(1) }
+    var sel by remember { mutableStateOf(prefs.companion.ordinal) }
     Page {
         StepBack(onBack)
         Spacer(Modifier.height(20.dp))
@@ -130,7 +141,7 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
                     Modifier.size(48.dp).clip(CircleShape)
                         .background(Brush.radialGradient(listOf(c.b1, c.b2))),
                     contentAlignment = Alignment.Center
-                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], UserPref.skin, UserPref.gender) }
+                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], Color(prefs.skin), prefs.gender) }
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Text(name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -139,21 +150,23 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        NyaButton("Continue", { UserPref.companion = Companion.entries[sel]; onContinue() })
+        NyaButton("Continue", { app.setCompanion(Companion.entries[sel]); onContinue() })
     }
 }
 
 private val Skins = listOf(0xFFF3D5BC, 0xFFE0AC84, 0xFFC68A5E, 0xFF8D5A3B, 0xFF5A3A27)
 
-private fun previewVoice() {
-    val voice = VoiceEngine.chosen ?: return
-    VoiceEngine.speak("Hello, ${UserPref.name}! I'm ${UserPref.companion.name}. Nice to meet you.", voice)
+private fun previewVoice(prefs: Prefs) {
+    val voice = VoiceEngine.chosen(prefs.gender, prefs.voice) ?: return
+    VoiceEngine.speak("Hello, ${prefs.name}! I'm ${prefs.companion.name}. Nice to meet you.", voice)
 }
 
 @Composable
 fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
-    var skin by remember { mutableStateOf(1) }
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
+    var skin by remember { mutableStateOf(Skins.indexOfFirst { Color(it).toArgb() == prefs.skin }.takeIf { it >= 0 } ?: 1) }
     val context = LocalContext.current
     DisposableEffect(Unit) {
         VoiceEngine.init(context)
@@ -185,7 +198,7 @@ fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
             VoicePicker()
         }
         NyaButton(
-            "Continue", { UserPref.skin = Color(Skins[skin]); onContinue() },
+            "Continue", { app.setSkin(Color(Skins[skin]).toArgb()); onContinue() },
             Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
         )
     }
@@ -195,6 +208,7 @@ fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
 @Composable
 private fun AvatarPreview(skin: Color) {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
     val shape = RoundedCornerShape(28.dp)
     Box(
         Modifier.fillMaxWidth().height(220.dp).clip(shape)
@@ -202,9 +216,9 @@ private fun AvatarPreview(skin: Color) {
         contentAlignment = Alignment.Center
     ) {
         NyaOrb(130.dp) {
-            Crossfade(UserPref.gender to skin, animationSpec = motionSpec(), label = "look") { (gender, tone) ->
+            Crossfade(prefs.gender to skin, animationSpec = motionSpec(), label = "look") { (gender, tone) ->
                 Avatar2D(
-                    Modifier.fillMaxSize(), UserPref.companion, tone, gender,
+                    Modifier.fillMaxSize(), prefs.companion, tone, gender,
                     if (VoiceEngine.speaking) AvatarState.Speaking else AvatarState.Idle, mouth = VoiceEngine.mouth
                 )
             }
@@ -214,9 +228,11 @@ private fun AvatarPreview(skin: Color) {
 
 @Composable
 private fun GenderPicker() {
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         Gender.entries.forEach { g ->
-            NyaChip(g.name, UserPref.gender == g, { UserPref.gender = g; previewVoice() }, Modifier.weight(1f))
+            NyaChip(g.name, prefs.gender == g, { app.setGender(g); previewVoice(prefs.copy(gender = g)) }, Modifier.weight(1f))
         }
     }
 }
@@ -224,10 +240,12 @@ private fun GenderPicker() {
 @Composable
 private fun VoicePicker() {
     val c = LocalNya.current
+    val prefs = LocalPrefs.current
+    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Voice style", color = c.sb, fontSize = 12.sp, modifier = Modifier.weight(1f))
         if (VoiceEngine.available) IconBtn(if (VoiceEngine.speaking) NyaIcons.Stop else NyaIcons.Play, 36.dp) {
-            if (VoiceEngine.speaking) VoiceEngine.stop() else previewVoice()
+            if (VoiceEngine.speaking) VoiceEngine.stop() else previewVoice(prefs)
         }
     }
     Spacer(Modifier.height(10.dp))
@@ -235,9 +253,9 @@ private fun VoicePicker() {
         Text("Voices aren't available on this device.", color = c.sb, fontSize = 13.sp)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        val chosen = VoiceEngine.chosen
-        VoiceEngine.options.forEachIndexed { i, v ->
-            NyaChip(v.name, v == chosen, { UserPref.voice = i; previewVoice() }, Modifier.weight(1f), hPad = 6.dp)
+        val chosen = VoiceEngine.chosen(prefs.gender, prefs.voice)
+        VoiceEngine.options(prefs.gender).forEachIndexed { i, v ->
+            NyaChip(v.name, v == chosen, { app.setVoice(i); previewVoice(prefs.copy(voice = i)) }, Modifier.weight(1f), hPad = 6.dp)
         }
     }
 }

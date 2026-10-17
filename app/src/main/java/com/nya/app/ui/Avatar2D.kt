@@ -35,16 +35,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.cos
+import com.nya.app.data.Companion
+import com.nya.app.data.Gender
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class Companion { Wanderer, Muse, Guide, Yogi, Creator }
-
 enum class AvatarState { Idle, Listening, Thinking, Speaking }
-
-enum class Gender { Female, Male }
-
-val DefaultSkin = Color(0xFFE0AC84)
 
 // one clock (ms) drives breathing (4s), sway (6s), glances, nods, blinks and the mouth
 private const val PERIOD = 12000f
