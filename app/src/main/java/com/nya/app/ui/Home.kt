@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.data.ModeLabels
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.AppViewModel
 import com.nya.app.viewmodel.MemoriesViewModel
@@ -142,7 +143,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
         Row(Modifier.staggerIn(2), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            listOf("Travel", "Focus", "Wellness", "Creator").forEachIndexed { i, t ->
+            ModeLabels.forEachIndexed { i, t ->
                 NyaChip(t, prefs.mode == i, { app.setMode(i) }, Modifier.weight(1f), hPad = 6.dp)
             }
         }

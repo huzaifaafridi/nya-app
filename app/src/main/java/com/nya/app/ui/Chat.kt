@@ -19,11 +19,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.data.ModeLabels
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.ChatViewModel
 import com.nya.app.viewmodel.Loadable
@@ -37,7 +41,9 @@ fun ChatScreen(onBack: () -> Unit) {
     val vm = viewModel<ChatViewModel>(factory = ChatViewModel.Factory)
     val state by vm.messages.collectAsState()
     val msgs = state.valueOrNull().orEmpty()
-    val typing by vm.typing.collectAsState()
+    val draft by vm.draft.collectAsState()
+    val error by vm.error.collectAsState()
+    val typing = draft == ""
     var input by remember { mutableStateOf("") }
     var speaking by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
@@ -47,7 +53,7 @@ fun ChatScreen(onBack: () -> Unit) {
     val lastOld = remember(loaded) { msgs.maxOfOrNull { it.id } ?: 0L }
 
     fun send(t: String = input) {
-        if (loaded && t.isNotBlank()) {
+        if (loaded && draft == null && t.isNotBlank()) {
             vm.send(t)
             input = ""
         }
@@ -74,12 +80,15 @@ fun ChatScreen(onBack: () -> Unit) {
     LaunchedEffect(msgs.size, typing) {
         list.animateScrollToItem(msgs.size)
     }
+    LaunchedEffect(draft) {
+        list.scrollToItem(msgs.size)
+    }
 
     Column(
         Modifier.fillMaxSize().nyaBg()
             .statusBarsPadding().navigationBarsPadding().imePadding()
     ) {
-        ChatHeader(onBack = onBack, name = "Nya", sub = if (typing) "typing..." else "The Muse · Focus",
+        ChatHeader(onBack = onBack, name = "Nya", sub = if (typing) "typing..." else "The ${prefs.companion.name} · ${ModeLabels.getOrElse(prefs.mode) { ModeLabels[0] }}",
             state = when {
                 typing -> AvatarState.Thinking
                 speaking || VoiceEngine.speaking -> AvatarState.Speaking
@@ -102,7 +111,17 @@ fun ChatScreen(onBack: () -> Unit) {
                     if (m.mine) UserBubble(m.text) else AiBubble(m.text)
                 }
             }
-            if (typing) item { Box(Modifier.staggerIn(0)) { TypingBubble() } }
+            draft?.let { text ->
+                item(key = "draft") {
+                    if (typing) Box(Modifier.staggerIn(0)) { TypingBubble() } else AiBubble(text)
+                }
+            }
+        }
+
+        error?.let {
+            Text(it, color = NyaDanger, fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite })
         }
 
         // quick replies

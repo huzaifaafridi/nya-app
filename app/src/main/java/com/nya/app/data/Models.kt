@@ -2,6 +2,8 @@ package com.nya.app.data
 
 enum class Companion { Wanderer, Muse, Guide, Yogi, Creator }
 
+val ModeLabels = listOf("Travel", "Focus", "Wellness", "Creator")
+
 enum class Gender { Female, Male }
 
 enum class Scene { Sea, Forest, Dusk, Mount, Yoga, City }

@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.ai)
     implementation(libs.googleid)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
