@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,7 +32,7 @@ fun PairFailScreen(onBack: () -> Unit) {
             Box(
                 Modifier.size(96.dp).border(3.dp, c.ac, CircleShape),
                 contentAlignment = Alignment.Center
-            ) { Text("!", color = c.ac, fontSize = 40.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("!", color = c.ac, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics {}) }
             Spacer(Modifier.height(22.dp))
             Text("Couldn't connect", color = c.tx, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text("Let's try a few things.", color = c.sb, fontSize = 14.sp,

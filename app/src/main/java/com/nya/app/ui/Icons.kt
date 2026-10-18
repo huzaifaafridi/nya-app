@@ -30,7 +30,6 @@ object NyaIcons {
     const val Capture = "M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0 -16z M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0 -6z"
     val Grid = rr(4, 4) + rr(13, 4) + rr(4, 13) + rr(13, 13)
     const val Device = "M3 17a9 9 0 0 1 18 0 M6 17v-3 M18 17v-3"
-    const val Bell = "M6 17V11a6 6 0 0 1 12 0v6l2 2H4z M10 21h4"
     const val Mic = "M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1 -6 0v-6a3 3 0 0 1 3 -3z M5 11a7 7 0 0 0 14 0 M12 18v3"
     const val Back = "M15 5l-7 7 7 7"
     const val Chevron = "M9 5l7 7-7 7"

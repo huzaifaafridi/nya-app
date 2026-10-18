@@ -2,11 +2,11 @@
 
 package com.nya.app.viewmodel
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.nya.app.MainDispatcherRule
 import com.nya.app.data.FakeMemoryRepository
 import com.nya.app.data.Memory
 import com.nya.app.data.MemoryRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf

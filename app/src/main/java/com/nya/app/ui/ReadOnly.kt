@@ -25,7 +25,7 @@ fun ReadOnlyScreen(onBack: () -> Unit) {
     val state = vm.memories.collectAsState().value
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Memories", onBack)
-        Column(Modifier.padding(horizontal = 20.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             XCard {
                 Text("🔒  Read-only mode", color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(
@@ -55,7 +55,6 @@ fun ReadOnlyScreen(onBack: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
         Column(Modifier.padding(20.dp)) {
             XBtn("Reconnect headband", { SubNav.open("PairFail") })
             Spacer(Modifier.height(12.dp))

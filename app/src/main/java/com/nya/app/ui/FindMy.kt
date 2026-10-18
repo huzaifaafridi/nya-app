@@ -1,7 +1,6 @@
 package com.nya.app.ui
 
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -42,35 +41,33 @@ fun FindMyScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Find my Nya", onBack)
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier.fillMaxWidth().height(280.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            repeat(3) { k ->
-                val f = (p + k / 3f) % 1f
+        CenterScroll(Modifier.weight(1f)) {
+            Box(
+                Modifier.fillMaxWidth().height(280.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                repeat(3) { k ->
+                    val f = (p + k / 3f) % 1f
+                    Box(
+                        Modifier.size(260.dp).scale(0.3f + 0.7f * f).alpha(1f - f)
+                            .border(2.dp, c.ac, CircleShape)
+                    )
+                }
                 Box(
-                    Modifier.size(260.dp).scale(0.3f + 0.7f * f).alpha(1f - f)
-                        .border(2.dp, c.ac, CircleShape)
+                    Modifier.size(22.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(c.b1, c.b2)))
                 )
             }
-            Box(
-                Modifier.size(22.dp).clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(c.b1, c.b2)))
+            Text(device?.name ?: "Your Nya", color = c.tx, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    ringing -> "Ringing…"
+                    device?.state == LinkState.Connected -> "Connected · nearby"
+                    else -> "Not connected"
+                },
+                color = c.sb, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)
             )
         }
-        Text(device?.name ?: "Your Nya", color = c.tx, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.align(Alignment.CenterHorizontally))
-        Text(
-            when {
-                ringing -> "Ringing…"
-                device?.state == LinkState.Connected -> "Connected · nearby"
-                else -> "Not connected"
-            },
-            color = c.sb, fontSize = 14.sp,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp)
-        )
-        Spacer(Modifier.weight(1f))
         Column(Modifier.padding(horizontal = 20.dp, vertical = 30.dp)) {
             XBtn(if (ringing) "Stop sound" else "Play sound", { vm.ring(!ringing) })
             Spacer(Modifier.height(12.dp))

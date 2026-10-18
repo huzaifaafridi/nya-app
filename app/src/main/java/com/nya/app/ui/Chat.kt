@@ -2,10 +2,12 @@ package com.nya.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -20,6 +22,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -125,7 +129,7 @@ fun ChatScreen(onBack: () -> Unit) {
         }
 
         // quick replies
-        Row(Modifier.padding(horizontal = 17.dp, vertical = 6.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 17.dp, vertical = 6.dp)) {
             listOf("Summarize my day", "Best shot today").forEach {
                 NyaChip(it, false, { send(it) })
             }
@@ -135,12 +139,12 @@ fun ChatScreen(onBack: () -> Unit) {
         val pill = RoundedCornerShape(29.dp)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-                .height(58.dp).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
+                .heightIn(min = 58.dp).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
                 .padding(start = 20.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.weight(1f)) {
-                if (input.isEmpty()) Text("Ask anything…", color = c.sb, fontSize = 15.sp)
+                if (input.isEmpty()) Text("Ask anything…", color = c.sb, fontSize = 15.sp, modifier = Modifier.clearAndSetSemantics {})
                 BasicTextField(
                     value = input,
                     onValueChange = { input = it },
@@ -149,13 +153,13 @@ fun ChatScreen(onBack: () -> Unit) {
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Message" }
                 )
             }
-            IconBtn(NyaIcons.Mic)
+            IconBtn(NyaIcons.Mic, "Microphone")
             Spacer(Modifier.width(8.dp))
             Box(
-                Modifier.size(42.dp).pressScale { send() }.clip(CircleShape)
+                Modifier.pressScale(description = "Send") { send() }.size(42.dp).clip(CircleShape)
                     .background(Brush.verticalGradient(listOf(c.b1, c.b2))),
                 contentAlignment = Alignment.Center
             ) { NyaIcon(NyaIcons.Up, tint = c.on, iconSize = 20.dp, strokeW = 2f) }

@@ -48,10 +48,10 @@ fun NyaOrb(size: Dp, glow: Boolean = true, content: @Composable BoxScope.() -> U
 }
 
 @Composable
-fun IconBtn(d: String, size: Dp = 42.dp, onClick: () -> Unit = {}) {
+fun IconBtn(d: String, contentDescription: String, size: Dp = 42.dp, onClick: () -> Unit = {}) {
     val c = LocalNya.current
     Box(
-        Modifier.size(size).pressScale { onClick() }.clip(CircleShape).background(c.sf).border(1.dp, c.ln, CircleShape),
+        Modifier.pressScale(description = contentDescription) { onClick() }.size(size).clip(CircleShape).background(c.sf).border(1.dp, c.ln, CircleShape),
         contentAlignment = Alignment.Center
     ) { NyaIcon(d, tint = c.tx, iconSize = 20.dp) }
 }
@@ -124,7 +124,7 @@ fun ChatHeader(onBack: () -> Unit, name: String, sub: String, state: AvatarState
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconBtn(NyaIcons.Back, onClick = onBack)
+        IconBtn(NyaIcons.Back, "Back", onClick = onBack)
         Spacer(Modifier.width(12.dp))
         NyaOrb(42.dp, glow = false) { Avatar2D(Modifier.size(40.dp), prefs.companion, Color(prefs.skin), prefs.gender, state, mouth = mouth) }
         Spacer(Modifier.width(12.dp))
@@ -132,6 +132,6 @@ fun ChatHeader(onBack: () -> Unit, name: String, sub: String, state: AvatarState
             Text(name, color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Text(sub, color = c.sb, fontSize = 13.sp)
         }
-        IconBtn(NyaIcons.Speaker)
+        IconBtn(NyaIcons.Speaker, "Speaker")
     }
 }

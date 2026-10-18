@@ -2,13 +2,13 @@
 
 package com.nya.app.viewmodel
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.nya.app.MainDispatcherRule
 import com.nya.app.data.DeviceInfo
 import com.nya.app.data.DeviceRepository
 import com.nya.app.data.ble.BleClient
 import com.nya.app.data.ble.LinkState
 import com.nya.app.data.ble.SimulatedBleClient
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy

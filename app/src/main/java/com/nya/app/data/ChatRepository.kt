@@ -120,9 +120,9 @@ abstract class StreamingChat(
                             if (saved != null && partial.isNotEmpty()) {
                                 try {
                                     saveNya(saved.uid, partial)
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Throwable) {
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (ignored: Throwable) {
                                     // The partial text is best effort; the busy error still shows.
                                 }
                             }

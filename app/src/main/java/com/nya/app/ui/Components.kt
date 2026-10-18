@@ -1,10 +1,16 @@
 package com.nya.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,24 +38,24 @@ import com.nya.app.viewmodel.Loadable
 fun NyaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
     val c = LocalNya.current
     Box(
-        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = { if (!loading) onClick() })
-            .clip(RoundedCornerShape(27.dp)).background(Brush.verticalGradient(listOf(c.b1, c.b2))),
+        modifier.fillMaxWidth().heightIn(min = 54.dp).pressScale(onClick = { if (!loading) onClick() })
+            .clip(RoundedCornerShape(27.dp)).background(Brush.verticalGradient(listOf(c.b1, c.b2)))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = c.on, strokeWidth = 2.dp)
-        else Text(text, color = c.on, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        if (loading) CircularProgressIndicator(
+            Modifier.size(22.dp).semantics { contentDescription = "Loading" }, color = c.on, strokeWidth = 2.dp
+        )
+        else Text(text, color = c.on, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 fun AuthMessage(error: String?, info: String?) {
     val c = LocalNya.current
-    if (error != null) {
-        Text(error, color = NyaDanger, fontSize = 13.sp,
-            modifier = Modifier.padding(top = 12.dp).semantics { liveRegion = LiveRegionMode.Polite })
-    } else if (info != null) {
-        Text(info, color = c.sb, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
-    }
+    val line = Modifier.padding(top = 12.dp).semantics { liveRegion = LiveRegionMode.Polite }
+    if (error != null) Text(error, color = NyaDanger, fontSize = 13.sp, modifier = line)
+    else if (info != null) Text(info, color = c.sb, fontSize = 13.sp, modifier = line)
 }
 
 @Composable
@@ -78,18 +84,35 @@ fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifi
         Text(message, color = NyaDanger, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         Text("Try again", color = LocalNya.current.ac, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 10.dp).pressScale { onRetry() })
+            modifier = Modifier.pressScale { onRetry() }.minimumInteractiveComponentSize())
     }
 }
 
-/** Shows loading / error in the content area, and [content] once [state] is ready. */
+/** Fades between loading / error and [content] once [state] is ready; new values of the same kind update in place. */
 @Composable
 fun <T> LoadableContent(state: Loadable<T>, onRetry: () -> Unit, content: @Composable (T) -> Unit) {
     val pad = Modifier.padding(vertical = 40.dp)
-    when (state) {
-        Loadable.Loading -> LoadingState(pad)
-        is Loadable.Failed -> ErrorState(state.message, onRetry, pad)
-        is Loadable.Ready -> content(state.value)
+    val fade = motionSpec<Float>()
+    AnimatedContent(
+        state, transitionSpec = { (fadeIn(fade) togetherWith fadeOut(fade)).using(null) },
+        contentKey = { it::class }, label = "loadable"
+    ) { s ->
+        when (s) {
+            Loadable.Loading -> LoadingState(pad)
+            is Loadable.Failed -> ErrorState(s.message, onRetry, pad)
+            is Loadable.Ready -> Column { content(s.value) }
+        }
+    }
+}
+
+/** Fills its space and centres [content]; scrolls instead when the content is taller (big fonts, small phones). */
+@Composable
+fun CenterScroll(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    BoxWithConstraints(modifier) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(min = maxHeight).verticalScroll(rememberScrollState()),
+            Arrangement.Center, Alignment.CenterHorizontally, content = content
+        )
     }
 }
 
@@ -98,10 +121,10 @@ fun NyaOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Mod
     val c = LocalNya.current
     val shape = RoundedCornerShape(27.dp)
     Box(
-        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = onClick).clip(shape).background(c.sf)
-            .border(1.dp, c.ln, shape),
+        modifier.fillMaxWidth().heightIn(min = 54.dp).pressScale(onClick = onClick).clip(shape).background(c.sf)
+            .border(1.dp, c.ln, shape).padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
-    ) { Text(text, color = c.tx, fontWeight = FontWeight.Medium, fontSize = 14.sp) }
+    ) { Text(text, color = c.tx, fontWeight = FontWeight.Medium, fontSize = 14.sp, textAlign = TextAlign.Center) }
 }
 
 @Composable
@@ -110,7 +133,7 @@ fun NyaField(
     keyboardType: KeyboardType = KeyboardType.Text, transformation: VisualTransformation = VisualTransformation.None
 ) {
     val c = LocalNya.current
-    Column {
+    Column(Modifier.semantics(mergeDescendants = true) {}) {
         Text(label, color = c.sb, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
         OutlinedTextField(
             value = value, onValueChange = onChange, singleLine = true,

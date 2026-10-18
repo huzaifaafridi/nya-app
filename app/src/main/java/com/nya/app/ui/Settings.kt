@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,7 +43,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                         Modifier.size(52.dp).clip(CircleShape)
                             .background(Brush.linearGradient(listOf(c.b1, c.b2))),
                         contentAlignment = Alignment.Center
-                    ) { Text(prefs.name.take(1), color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(prefs.name.take(1), color = c.on, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clearAndSetSemantics {}) }
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text(prefs.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
@@ -57,7 +60,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 listOf("Auto", "Light", "Dark").forEachIndexed { i, label ->
                     val sel = prefs.theme == i
                     Box(
-                        Modifier.weight(1f).pressScale { app.setTheme(i) }.clip(RoundedCornerShape(12.dp))
+                        Modifier.weight(1f).pressScale(role = Role.RadioButton, selected = sel) { app.setTheme(i) }.clip(RoundedCornerShape(12.dp))
                             .background(if (sel) c.ac else Color.Transparent)
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center

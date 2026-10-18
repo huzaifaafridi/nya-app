@@ -40,7 +40,6 @@ class AppViewModel(
         viewModelScope.launch { profile.update(transform) }
     }
 
-    fun setName(name: String) = updateProfile { it.copy(name = name) }
     fun setCompanion(companion: CompanionType) = updateProfile { it.copy(companion = companion) }
     fun setSkin(argb: Int) = updateProfile { it.copy(skin = argb) }
     fun setGender(gender: Gender) = updateProfile { it.copy(gender = gender) }

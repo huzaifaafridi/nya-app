@@ -2,10 +2,10 @@
 
 package com.nya.app.data
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.nya.app.data.ble.LinkState
 import com.nya.app.data.ble.NyaBleUuids
 import com.nya.app.data.ble.SimulatedBleClient
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy

@@ -14,15 +14,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -69,16 +72,16 @@ fun NavBar(tab: Tab, onTab: (Tab) -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier.fillMaxWidth().navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 18.dp)
-            .height(68.dp).clip(shape).background(c.sf).border(1.dp, c.ln, shape),
+            .heightIn(min = 68.dp).clip(shape).background(c.sf).border(1.dp, c.ln, shape),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Tab.values().forEach { t -> NavItem(t, t == tab) { onTab(t) } }
+        Tab.values().forEach { t -> NavItem(t, t == tab, Modifier.weight(1f, fill = false)) { onTab(t) } }
     }
 }
 
 @Composable
-private fun NavItem(t: Tab, selected: Boolean, onClick: () -> Unit) {
+private fun NavItem(t: Tab, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val c = LocalNya.current
     val reduce = LocalReduceMotion.current
     val col by animateColorAsState(if (selected) c.ac else c.sb, motionSpec(), label = "navColor")
@@ -100,13 +103,13 @@ private fun NavItem(t: Tab, selected: Boolean, onClick: () -> Unit) {
         Tab.Device -> NyaIcons.Device
     }
     Column(
-        Modifier.pressScale(onClick = onClick).clip(RoundedCornerShape(20.dp))
+        modifier.pressScale(role = Role.Tab, selected = selected, onClick = onClick).clip(RoundedCornerShape(20.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         NyaIcon(icon, tint = col, modifier = Modifier.graphicsLayer { scaleX = bounce.value; scaleY = bounce.value })
         Text(t.label, color = col, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 3.dp))
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
     }
 }
 
@@ -133,7 +136,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
                 Text(greeting(), color = c.sb, fontSize = 13.sp)
                 Text(prefs.name, color = c.tx, fontSize = 30.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
-            Box(Modifier.size(46.dp).breathe().pressScale { SubNav.open("Settings") }.clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2))))
+            Box(Modifier.size(46.dp).breathe().pressScale(description = "Settings") { SubNav.open("Settings") }.clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2))))
         }
 
         Spacer(Modifier.height(22.dp))
@@ -151,7 +154,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         val card = RoundedCornerShape(22.dp)
         Row(
-            Modifier.fillMaxWidth().staggerIn(3).clip(card).background(c.sf).border(1.dp, c.ln, card).padding(horizontal = 16.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().staggerIn(3).toggleRow(prefs.quiet, Role.Switch) { app.setQuiet(it) }.clip(card).background(c.sf).border(1.dp, c.ln, card).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NyaIcon(NyaIcons.Speaker, tint = c.ac)
@@ -161,7 +164,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
                 Text("Silences voice replies only", color = c.sb, fontSize = 13.sp)
             }
             Switch(
-                checked = prefs.quiet, onCheckedChange = { app.setQuiet(it) },
+                checked = prefs.quiet, onCheckedChange = null, modifier = Modifier.minimumInteractiveComponentSize(),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = c.on, checkedTrackColor = c.ac,
                     uncheckedThumbColor = c.sb, uncheckedTrackColor = c.bg
@@ -176,7 +179,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // tapping the avatar says hello instead of opening Chat
-            Box(Modifier.pressScale {
+            Box(Modifier.pressScale(description = "Say hello") {
                 val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
                 if (!prefs.quiet && voice != null) VoiceEngine.speak("Hello, ${prefs.name}!", voice)
             }) {
@@ -196,12 +199,11 @@ fun HomeScreen(onSeeAll: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth().staggerIn(5), verticalAlignment = Alignment.CenterVertically) {
             Text("MEMORIES", color = c.sb, fontSize = 11.sp, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
-            Text("See all", color = c.ac, fontSize = 13.sp, modifier = Modifier.pressScale { onSeeAll() })
+            Text("See all", color = c.ac, fontSize = 13.sp, modifier = Modifier.pressScale { onSeeAll() }.minimumInteractiveComponentSize())
         }
-        Spacer(Modifier.height(10.dp))
         LoadableContent(state, memories::retry) {
             if (it.isEmpty()) EmptyState("No memories yet", "Capture a moment and it will show up here.", Modifier.padding(vertical = 40.dp))
             else RecentRow(it, { MemNav.open(it) }, start = 6)

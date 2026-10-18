@@ -31,7 +31,7 @@ fun TransferScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Transfer", onBack)
-        Column(Modifier.padding(horizontal = 20.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             Text(
                 if (items.isNotEmpty() && done == items.size) "All synced" else "Syncing from ${vm.device.collectAsState().value.valueOrNull()?.name ?: "your headband"}",
                 color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold

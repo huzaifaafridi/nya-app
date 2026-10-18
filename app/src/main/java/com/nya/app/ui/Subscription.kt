@@ -6,12 +6,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,7 +30,7 @@ val plans = listOf(
 @Composable
 fun SubscriptionScreen(onBack: () -> Unit) {
     val c = LocalNya.current
-    var sel by remember { mutableStateOf(0) }
+    var sel by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Subscription", onBack)
         Column(
@@ -39,7 +40,7 @@ fun SubscriptionScreen(onBack: () -> Unit) {
                 val shape = RoundedCornerShape(20.dp)
                 val on = sel == i
                 Column(
-                    Modifier.padding(bottom = 14.dp).fillMaxWidth().pressScale { sel = i }.clip(shape)
+                    Modifier.padding(bottom = 14.dp).fillMaxWidth().pressScale(role = Role.RadioButton, selected = on) { sel = i }.clip(shape)
                         .background(c.sf).border(if (on) 2.dp else 1.dp, if (on) c.ac else c.ln, shape)
                         .padding(20.dp)
                 ) {

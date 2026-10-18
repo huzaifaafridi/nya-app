@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.runtime.Composable
@@ -17,7 +18,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,9 +49,11 @@ fun NyaThumb(
     badge: String? = null,
     play: Boolean = false,
     onClick: (() -> Unit)? = null,
-    index: Int = 0
+    index: Int = 0,
+    contentDescription: String? = null
 ) {
-    val base = modifier.popIn(index).then(if (onClick != null) Modifier.pressScale { onClick() } else Modifier)
+    val base = modifier.popIn(index)
+        .then(if (onClick != null) Modifier.pressScale(description = contentDescription) { onClick() } else Modifier)
         .clip(RoundedCornerShape(18.dp))
         .background(scene.brush())
         .drawBehind {
@@ -70,7 +75,7 @@ fun NyaThumb(
         ) { NyaIcon(NyaIcons.Play, tint = Color.White, iconSize = 18.dp, filled = true) }
         if (badge != null) Text(
             badge, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-            modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)
+            modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).clearAndSetSemantics {}
                 .clip(RoundedCornerShape(12.dp)).background(Color(0x80000000))
                 .padding(horizontal = 10.dp, vertical = 4.dp)
         )
@@ -87,15 +92,16 @@ fun NyaChip(text: String, on: Boolean, onClick: () -> Unit, modifier: Modifier =
     val ink by animateColorAsState(if (on) c.ac else c.tx, motionSpec(), label = "ink")
     Box(
         modifier
-            .pressScale { onClick() }
+            .pressScale(selected = on) { onClick() }.minimumInteractiveComponentSize()
             .border(3.dp, c.ac.copy(alpha = ring), RoundedCornerShape(22.dp)).padding(3.dp)
-            .height(38.dp).clip(shape)
+            .heightIn(min = 38.dp).clip(shape)
             .background(c.sf)
             .border(1.dp, line, shape)
             .padding(horizontal = hPad),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+        Text(text, color = ink, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false,
+            overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -103,7 +109,7 @@ fun NyaChip(text: String, on: Boolean, onClick: () -> Unit, modifier: Modifier =
 @Composable
 fun HomeHero(scene: Scene, title: String, sub: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier.fillMaxWidth().height(156.dp).pressScale { onClick() }.clip(RoundedCornerShape(24.dp))
+        modifier.fillMaxWidth().heightIn(min = 156.dp).pressScale { onClick() }.clip(RoundedCornerShape(24.dp))
             .background(scene.brush())
     ) {
         Box(Modifier.matchParentSize().background(
@@ -121,17 +127,20 @@ fun HomeHero(scene: Scene, title: String, sub: String, onClick: () -> Unit, modi
 fun RecentRow(items: List<Memory>, onOpen: (Long) -> Unit, start: Int = 0) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items.take(3).forEachIndexed { i, m ->
-            NyaThumb(m.scene, Modifier.weight(1f).height(84.dp), onClick = { onOpen(m.id) }, index = start + i)
+            NyaThumb(m.scene, Modifier.weight(1f).height(84.dp), onClick = { onOpen(m.id) }, index = start + i,
+                contentDescription = m.description())
         }
     }
 }
 
 private fun Memory.badge() = clipSeconds?.let { "Clip · ${it / 60}:%02d".format(it % 60) } ?: "Photo"
 
+private fun Memory.description() = "$title, ${if (clipSeconds != null) "clip" else "photo"}"
+
 // a thumb for one grid slot; slots without a memory stay empty
 @Composable
 private fun Slot(m: Memory?, modifier: Modifier, onOpen: (Long) -> Unit, index: Int) {
-    if (m != null) NyaThumb(m.scene, modifier, m.badge(), m.clipSeconds != null, { onOpen(m.id) }, index)
+    if (m != null) NyaThumb(m.scene, modifier, m.badge(), m.clipSeconds != null, { onOpen(m.id) }, index, m.description())
 }
 
 /** Memories: the masonry grid from the design */

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,10 +27,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.data.Companion
 import com.nya.app.data.Gender
 import com.nya.app.data.Prefs
+import com.nya.app.data.ble.LinkState
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.AppViewModel
 import com.nya.app.viewmodel.AuthViewModel
 import com.nya.app.viewmodel.DeviceViewModel
+import com.nya.app.viewmodel.valueOrNull
 
 @Composable
 fun Para(text: String) {
@@ -39,7 +43,7 @@ fun Para(text: String) {
 @Composable
 private fun StepBack(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    IconBtn(NyaIcons.Back, onClick = onBack)
+    IconBtn(NyaIcons.Back, "Back", onClick = onBack)
 }
 
 @Composable
@@ -56,7 +60,8 @@ fun VerifyScreen(onVerified: () -> Unit) {
         NyaButton("Continue", { auth.checkVerified(onVerified) }, loading = auth.busy)
         AuthMessage(auth.error, auth.info)
         Text("Didn't get it? Resend email", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = auth::resend))
+            modifier = Modifier.fillMaxWidth().padding(top = 9.dp).pressScale(onClick = auth::resend)
+                .minimumInteractiveComponentSize())
     }
 }
 
@@ -92,7 +97,7 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
         "Yogi" to "Mindful and steady",
         "Creator" to "Ideas and making things"
     )
-    var sel by remember { mutableStateOf(prefs.companion.ordinal) }
+    var sel by remember { mutableIntStateOf(prefs.companion.ordinal) }
     Page {
         StepBack(onBack)
         Spacer(Modifier.height(20.dp))
@@ -103,7 +108,7 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
         items.forEachIndexed { i, (name, desc) ->
             val shape = RoundedCornerShape(20.dp)
             Row(
-                Modifier.fillMaxWidth().padding(bottom = 12.dp).pressScale { sel = i }.clip(shape).background(c.sf)
+                Modifier.fillMaxWidth().padding(bottom = 12.dp).pressScale(role = Role.RadioButton, selected = i == sel) { sel = i }.clip(shape).background(c.sf)
                     .border(if (i == sel) 2.dp else 1.dp, if (i == sel) c.ac else c.ln, shape)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -137,7 +142,7 @@ fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
-    var skin by remember { mutableStateOf(Skins.indexOfFirst { Color(it).toArgb() == prefs.skin }.takeIf { it >= 0 } ?: 1) }
+    var skin by remember { mutableIntStateOf(Skins.indexOfFirst { Color(it).toArgb() == prefs.skin }.takeIf { it >= 0 } ?: 1) }
     val context = LocalContext.current
     DisposableEffect(Unit) {
         VoiceEngine.init(context)
@@ -160,7 +165,9 @@ fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Skins.forEachIndexed { i, col ->
                     Box(
-                        Modifier.size(44.dp).pressScale { skin = i }.clip(CircleShape).background(Color(col))
+                        Modifier.pressScale(role = Role.RadioButton, selected = i == skin, description = "Skin tone ${i + 1}") { skin = i }
+                            .size(44.dp)
+                            .clip(CircleShape).background(Color(col))
                             .border(if (i == skin) 3.dp else 1.dp, if (i == skin) c.ac else c.ln, CircleShape)
                     )
                 }
@@ -215,7 +222,10 @@ private fun VoicePicker() {
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Voice style", color = c.sb, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        if (VoiceEngine.available) IconBtn(if (VoiceEngine.speaking) NyaIcons.Stop else NyaIcons.Play, 36.dp) {
+        if (VoiceEngine.available) IconBtn(
+            if (VoiceEngine.speaking) NyaIcons.Stop else NyaIcons.Play,
+            if (VoiceEngine.speaking) "Stop" else "Play voice preview", 36.dp
+        ) {
             if (VoiceEngine.speaking) VoiceEngine.stop() else previewVoice(prefs)
         }
     }
@@ -283,40 +293,47 @@ fun PairScreen(onConnect: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
     val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
     val connecting by vm.connecting.collectAsState()
-    Column(
-        Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(Modifier.fillMaxWidth()) { StepBack(onBack) }
-        Box(
-            Modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, c.ac, RoundedCornerShape(14.dp))
-                .padding(horizontal = 12.dp, vertical = 5.dp)
-        ) { Text("Required", color = c.ac, fontSize = 12.sp) }
-        Spacer(Modifier.weight(1f))
-        Box(Modifier.size(320.dp), contentAlignment = Alignment.Center) {
-            PulseRing(0)
-            PulseRing(1200)
-            Box(Modifier.size(110.dp).clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2, c.sf))))
-        }
-        Spacer(Modifier.weight(1f))
-        Heading("Find your Nya")
-        Spacer(Modifier.height(8.dp))
-        Text("Turn on your headband and keep it close.", color = c.sb, fontSize = 15.sp, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(24.dp))
-        val shape = RoundedCornerShape(20.dp)
-        Row(
-            Modifier.fillMaxWidth().clip(shape).background(c.sf).border(1.dp, c.ln, shape).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val linking = vm.device.collectAsState().value.valueOrNull()?.state == LinkState.Connecting
+    // top, radar and bottom spread over the screen when they fit and scroll when they don't
+    BoxWithConstraints(Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding()) {
+        Column(
+            Modifier.heightIn(min = maxHeight).verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2))))
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text("NYA F1", color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(if (connecting) "Connecting…" else "Ready to pair", color = c.sb, fontSize = 13.sp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth()) { StepBack(onBack) }
+                Box(
+                    Modifier.clip(RoundedCornerShape(14.dp)).border(1.dp, c.ac, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) { Text("Required", color = c.ac, fontSize = 12.sp) }
+            }
+            Box(Modifier.size(320.dp), contentAlignment = Alignment.Center) {
+                PulseRing(0)
+                PulseRing(1200)
+                Box(Modifier.size(110.dp).clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2, c.sf))))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Heading("Find your Nya")
+                Spacer(Modifier.height(8.dp))
+                Text("Turn on your headband and keep it close.", color = c.sb, fontSize = 15.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(24.dp))
+                val shape = RoundedCornerShape(20.dp)
+                Row(
+                    Modifier.fillMaxWidth().clip(shape).background(c.sf).border(1.dp, c.ln, shape).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(Brush.radialGradient(listOf(c.b1, c.b2))))
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text("NYA F1", color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (connecting || linking) "Connecting…" else "Ready to pair", color = c.sb, fontSize = 13.sp)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                NyaButton("Connect", { vm.connect(onFail = { SubNav.open("PairFail") }, onSuccess = onConnect) }, loading = connecting)
             }
         }
-        Spacer(Modifier.height(16.dp))
-        NyaButton("Connect", { vm.connect(onFail = { SubNav.open("PairFail") }, onSuccess = onConnect) }, loading = connecting)
     }
 }
 

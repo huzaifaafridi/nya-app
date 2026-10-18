@@ -28,9 +28,9 @@ import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.DeviceViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun DeviceScreen() {
@@ -44,7 +44,7 @@ fun DeviceScreen() {
             .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 120.dp)
     ) {
         Text("Device", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
-            modifier = Modifier.staggerIn(0))
+            modifier = Modifier.staggerIn(0).asHeading())
         LoadableContent(state, vm::retry) { d ->
             if (d == null) {
                 EmptyState("No headband paired", "Pair your Nya headband to see battery, storage and updates.", Modifier.padding(vertical = 40.dp))
@@ -58,7 +58,7 @@ fun DeviceScreen() {
                     Text(d.name, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                         val connected = d.state == LinkState.Connected
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (connected) Color(0xFF5BC98A) else c.sb))
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (connected) NyaGreen else c.sb))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             when (d.state) {
@@ -123,8 +123,10 @@ private fun StatCard(label: String, value: String, frac: Float, modifier: Modifi
         else { delay(delayMs); fill.animateTo(frac, motionTween(Motion.LONG)) }
     }
     Column(modifier.clip(card).background(c.sf).border(1.dp, c.ln, card).padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Text(label, color = c.sb, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Medium)
-        Text(value, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+        Text(label, color = c.sb, fontSize = 12.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(value, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(5.dp).clip(CircleShape).background(c.ln)) {
             Box(Modifier
                 .layout { m, cs ->

@@ -11,12 +11,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 // shared motion tokens: short, FastOutSlowIn or springs, nothing flashy
 object Motion {
-    const val SHORT = 150
     const val MED = 250
     const val LONG = 350
     const val STAGGER = 60L
@@ -55,8 +58,12 @@ fun screenTransition(forward: Boolean, distPx: Int, reduce: Boolean): ContentTra
 /**
  * Clickable with a subtle press effect instead of the ripple: scales to 0.96 while pressed
  * and springs back. Put it before clip/background so the whole element scales.
+ * [role], [selected] and [description] are what TalkBack announces; use [description] for icon-only targets.
  */
-fun Modifier.pressScale(enabled: Boolean = true, onClick: () -> Unit): Modifier = composed {
+fun Modifier.pressScale(
+    enabled: Boolean = true, role: Role = Role.Button, selected: Boolean? = null,
+    description: String? = null, onClick: () -> Unit
+): Modifier = composed {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val reduce = LocalReduceMotion.current
@@ -65,7 +72,11 @@ fun Modifier.pressScale(enabled: Boolean = true, onClick: () -> Unit): Modifier 
         spring(dampingRatio = .6f, stiffness = Spring.StiffnessMedium), label = "press"
     )
     graphicsLayer { scaleX = s.value; scaleY = s.value }
-        .clickable(source, indication = null, enabled = enabled, onClick = onClick)
+        .clickable(source, indication = null, enabled = enabled, role = role, onClick = onClick)
+        .semantics {
+            if (description != null) contentDescription = description
+            if (selected != null) this.selected = selected
+        }
 }
 
 // 0 -> 1 once, after index * STAGGER; already 1 when motion is reduced or animate is false

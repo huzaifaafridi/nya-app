@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,10 +32,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun CaptureScreen(onBack: (() -> Unit)? = null) {
     val c = LocalNya.current
-    var mode by remember { mutableStateOf(0) }
+    var mode by remember { mutableIntStateOf(0) }
     var rec by remember { mutableStateOf(false) }
-    var secs by remember { mutableStateOf(0) }
-    var saved by remember { mutableStateOf(0) }
+    var secs by remember { mutableIntStateOf(0) }
+    var saved by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(rec) {
         if (rec) {
@@ -57,7 +59,7 @@ fun CaptureScreen(onBack: (() -> Unit)? = null) {
             XTop("Capture", onBack)
         } else {
             Text("Capture", color = c.tx, fontSize = 28.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.statusBarsPadding().padding(start = 20.dp, top = 24.dp, bottom = 18.dp))
+                modifier = Modifier.statusBarsPadding().padding(start = 20.dp, top = 24.dp, bottom = 18.dp).asHeading())
         }
 
         Row(
@@ -68,7 +70,7 @@ fun CaptureScreen(onBack: (() -> Unit)? = null) {
                 val sel = mode == i
                 val shape = RoundedCornerShape(20.dp)
                 Box(
-                    Modifier.pressScale { if (!rec) mode = i }.clip(shape)
+                    Modifier.pressScale(role = Role.RadioButton, selected = sel) { if (!rec) mode = i }.clip(shape)
                         .background(if (sel) c.ac else c.sf)
                         .border(1.dp, if (sel) c.ac else c.ln, shape)
                         .padding(horizontal = 18.dp, vertical = 8.dp)
@@ -93,7 +95,7 @@ fun CaptureScreen(onBack: (() -> Unit)? = null) {
             )
             Box(
                 Modifier.size(if (rec) 70.dp else 112.dp)
-                    .pressScale {
+                    .pressScale(description = if (mode == 0) "Take photo" else if (rec) "Stop recording" else "Start recording") {
                         if (mode == 0) saved++
                         else if (rec) { rec = false; saved++ }
                         else rec = true

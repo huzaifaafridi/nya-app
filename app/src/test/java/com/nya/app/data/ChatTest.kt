@@ -2,11 +2,11 @@
 
 package com.nya.app.data
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import androidx.lifecycle.viewModelScope
 import com.nya.app.MainDispatcherRule
 import com.nya.app.viewmodel.ChatViewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel

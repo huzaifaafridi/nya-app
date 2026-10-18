@@ -2,12 +2,12 @@
 
 package com.nya.app.viewmodel
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.nya.app.MainDispatcherRule
 import com.nya.app.data.AuthRepository
 import com.nya.app.data.AuthUser
 import com.nya.app.data.FakeAuthRepository
 import com.nya.app.data.FakeProfileRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
