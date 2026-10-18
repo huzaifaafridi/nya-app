@@ -56,9 +56,10 @@ class MainActivity : ComponentActivity() {
                 var memId by remember { mutableLongStateOf(0L) }
                 var sub by remember { mutableStateOf("") }
                 val subStack = remember { mutableStateListOf<String>() }
+                var returnTo by remember { mutableStateOf(Screen.Home) }
                 Nav.toChat = { s = Screen.Chat }
                 SubNav.open = { name ->
-                    if (s == Screen.Sub) subStack.add(sub)
+                    if (s == Screen.Sub) subStack.add(sub) else returnTo = s
                     sub = name
                     s = Screen.Sub
                 }
@@ -92,7 +93,7 @@ class MainActivity : ComponentActivity() {
                             Screen.Detail -> MemoryDetailScreen(memId, onBack = { s = Screen.Home })
                             Screen.Sub -> SubRouter(subName, onBack = {
                                 if (subStack.isNotEmpty()) sub = subStack.removeAt(subStack.lastIndex)
-                                else s = Screen.Home
+                                else s = returnTo
                             })
                         }
                     }

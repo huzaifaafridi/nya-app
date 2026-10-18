@@ -3,6 +3,7 @@ package com.nya.app.data.local
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
@@ -44,6 +45,12 @@ abstract class ChatDao {
 interface DeviceDao {
     @Query("SELECT * FROM DeviceEntity WHERE uid = :uid")
     fun observe(uid: String): Flow<DeviceEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfMissing(device: DeviceEntity)
+
+    @Query("UPDATE DeviceEntity SET battery = :battery, storageUsedGb = :used, storageTotalGb = :total, firmware = :firmware WHERE uid = :uid")
+    suspend fun updateReadings(uid: String, battery: Float, used: Float, total: Float, firmware: String)
 }
 
 /** Fills a new account with demo memories and a paired headband, once. */

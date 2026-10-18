@@ -28,6 +28,7 @@ import com.nya.app.data.Prefs
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.AppViewModel
 import com.nya.app.viewmodel.AuthViewModel
+import com.nya.app.viewmodel.DeviceViewModel
 
 @Composable
 fun Para(text: String) {
@@ -280,6 +281,8 @@ fun PulseRing(offsetMs: Int) {
 @Composable
 fun PairScreen(onConnect: () -> Unit, onBack: () -> Unit) {
     val c = LocalNya.current
+    val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
+    val connecting by vm.connecting.collectAsState()
     Column(
         Modifier.fillMaxSize().nyaBg().statusBarsPadding().navigationBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -309,11 +312,11 @@ fun PairScreen(onConnect: () -> Unit, onBack: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column {
                 Text("NYA F1", color = c.tx, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text("Ready to pair", color = c.sb, fontSize = 13.sp)
+                Text(if (connecting) "Connecting…" else "Ready to pair", color = c.sb, fontSize = 13.sp)
             }
         }
         Spacer(Modifier.height(16.dp))
-        NyaButton("Connect", onConnect)
+        NyaButton("Connect", { vm.connect(onFail = { SubNav.open("PairFail") }, onSuccess = onConnect) }, loading = connecting)
     }
 }
 

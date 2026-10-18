@@ -1,5 +1,7 @@
 package com.nya.app.data
 
+import com.nya.app.data.ble.LinkState
+
 enum class Companion { Wanderer, Muse, Guide, Yogi, Creator }
 
 val ModeLabels = listOf("Travel", "Focus", "Wellness", "Creator")
@@ -40,7 +42,8 @@ data class DeviceInfo(
     val storageUsedGb: Float,
     val storageTotalGb: Float,
     val firmware: String,
-    val latestFirmware: String?
+    val latestFirmware: String?,
+    val state: LinkState = LinkState.Disconnected
 )
 
 data class TransferItem(val title: String, val sizeMb: Int, val progress: Float)

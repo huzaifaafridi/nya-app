@@ -1,20 +1,36 @@
 package com.nya.app.data
 
+import com.nya.app.data.ble.BleClient
+import com.nya.app.data.ble.DeviceStatus
+import com.nya.app.data.ble.LinkState
 import com.nya.app.data.local.DeviceDao
+import com.nya.app.data.local.DeviceEntity
 import com.nya.app.data.local.SeedDao
 import com.nya.app.data.local.toDeviceInfo
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 interface DeviceRepository {
     val device: Flow<DeviceInfo?> // null = no headband paired
+    val ringing: StateFlow<Boolean>
+    suspend fun connect(): Result<Unit>
+    suspend fun disconnect()
+    suspend fun ring(on: Boolean): Result<Unit>
     fun transfers(): Flow<List<TransferItem>>
 }
 
@@ -22,38 +38,66 @@ interface DeviceRepository {
 class RoomDeviceRepository(
     private val dao: DeviceDao,
     private val seed: SeedDao,
-    uid: Flow<String?>
+    private val uid: Flow<String?>,
+    private val ble: BleClient,
+    scope: CoroutineScope
 ) : DeviceRepository {
     override val device: Flow<DeviceInfo?> = uid.flatMapLatest { id ->
         if (id == null) flowOf(null) else flow {
             seed.seed(id)
-            emitAll(dao.observe(id).map { it?.toDeviceInfo() })
+            emitAll(combine(dao.observe(id), ble.state, ble.status) { record, state, status ->
+                record?.toDeviceInfo()?.withLink(state, status)
+            })
         }
     }
 
-    override fun transfers() = simulatedTransfers()
+    override val ringing: StateFlow<Boolean> = ble.ringing
+
+    init {
+        scope.launch {
+            uid.flatMapLatest { id ->
+                if (id == null) emptyFlow() else ble.status.filterNotNull().map { id to it }
+            }.collect { (id, s) -> dao.updateReadings(id, s.battery, s.storageUsedGb, s.storageTotalGb, s.firmware) }
+        }
+        scope.launch { uid.distinctUntilChanged().drop(1).collect { ble.disconnect() } }
+    }
+
+    override suspend fun connect(): Result<Unit> = ble.connect().onSuccess {
+        val id = uid.first() ?: return@onSuccess
+        ble.status.value?.let { dao.insertIfMissing(it.toEntity(id)) }
+    }
+
+    override suspend fun disconnect() = ble.disconnect()
+
+    override suspend fun ring(on: Boolean) = ble.ring(on)
+
+    override fun transfers() = ble.transfer()
 }
 
 class FakeDeviceRepository : DeviceRepository {
     override val device: Flow<DeviceInfo?> =
         MutableStateFlow(DeviceInfo("NYA F1", "Wi-Fi and Bluetooth", 0.82f, 4.1f, 16f, "1.1.4", "1.2.0"))
+    override val ringing = MutableStateFlow(false)
 
-    override fun transfers() = simulatedTransfers()
-}
+    override suspend fun connect() = Result.success(Unit)
 
-private fun simulatedTransfers(): Flow<List<TransferItem>> = flow {
-    var items = listOf(
-        TransferItem("Sunset at the pier", 24, 1f),
-        TransferItem("Coffee with Ali", 88, 0.6f),
-        TransferItem("Morning walk", 41, 0f),
-        TransferItem("Late night idea", 6, 0f)
-    )
-    emit(items)
-    while (true) {
-        val i = items.indexOfFirst { it.progress < 1f }
-        if (i == -1) break
-        delay(120)
-        items = items.mapIndexed { j, t -> if (j == i) t.copy(progress = minOf(1f, t.progress + 0.03f)) else t }
-        emit(items)
+    override suspend fun disconnect() {}
+
+    override suspend fun ring(on: Boolean): Result<Unit> {
+        ringing.value = on
+        return Result.success(Unit)
     }
+
+    override fun transfers(): Flow<List<TransferItem>> = flowOf(emptyList())
 }
+
+private fun DeviceInfo.withLink(state: LinkState, status: DeviceStatus?) =
+    if (state == LinkState.Connected && status != null) {
+        copy(
+            battery = status.battery, storageUsedGb = status.storageUsedGb,
+            storageTotalGb = status.storageTotalGb, firmware = status.firmware, state = state
+        )
+    } else copy(state = state)
+
+private fun DeviceStatus.toEntity(uid: String) =
+    DeviceEntity(uid, name, "Wi-Fi and Bluetooth", battery, storageUsedGb, storageTotalGb, firmware, "1.2.0")

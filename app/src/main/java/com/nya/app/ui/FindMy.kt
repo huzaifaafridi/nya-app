@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -24,12 +22,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.data.ble.LinkState
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.DeviceViewModel
+import com.nya.app.viewmodel.valueOrNull
 
 @Composable
 fun FindMyScreen(onBack: () -> Unit) {
     val c = LocalNya.current
-    var ringing by remember { mutableStateOf(false) }
+    val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
+    val device = vm.device.collectAsState().value.valueOrNull()
+    val ringing by vm.ringing.collectAsState()
     val t = rememberInfiniteTransition(label = "radar")
     val p by t.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -55,16 +59,20 @@ fun FindMyScreen(onBack: () -> Unit) {
                     .background(Brush.linearGradient(listOf(c.b1, c.b2)))
             )
         }
-        Text("NYA F1", color = c.tx, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
+        Text(device?.name ?: "Your Nya", color = c.tx, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(
-            if (ringing) "Ringing…" else "Last seen 2 min ago",
+            when {
+                ringing -> "Ringing…"
+                device?.state == LinkState.Connected -> "Connected · nearby"
+                else -> "Not connected"
+            },
             color = c.sb, fontSize = 14.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp)
         )
         Spacer(Modifier.weight(1f))
         Column(Modifier.padding(horizontal = 20.dp, vertical = 30.dp)) {
-            XBtn(if (ringing) "Stop sound" else "Play sound", { ringing = !ringing })
+            XBtn(if (ringing) "Stop sound" else "Play sound", { vm.ring(!ringing) })
             Spacer(Modifier.height(12.dp))
             XGhost("Mark as lost", { })
         }

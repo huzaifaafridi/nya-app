@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.data.ble.LinkState
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.DeviceViewModel
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +37,7 @@ fun DeviceScreen() {
     val c = LocalNya.current
     val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
     val state = vm.device.collectAsState().value
+    val connecting by vm.connecting.collectAsState()
     val card = RoundedCornerShape(22.dp)
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
@@ -56,9 +58,17 @@ fun DeviceScreen() {
                 Column {
                     Text(d.name, color = c.tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF5BC98A)))
+                        val connected = d.state == LinkState.Connected
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (connected) Color(0xFF5BC98A) else c.sb))
                         Spacer(Modifier.width(8.dp))
-                        Text("Connected · ${d.link}", color = c.sb, fontSize = 13.sp)
+                        Text(
+                            when (d.state) {
+                                LinkState.Connected -> "Connected · ${d.link}"
+                                LinkState.Connecting -> "Connecting…"
+                                LinkState.Disconnected -> if (connecting) "Connecting…" else "Disconnected"
+                            },
+                            color = c.sb, fontSize = 13.sp
+                        )
                     }
                 }
             }
@@ -94,7 +104,7 @@ fun DeviceScreen() {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
                 DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
-                DevRow(NyaIcons.Refresh, "Reconnect") { }
+                DevRow(NyaIcons.Refresh, "Reconnect") { vm.reconnect { SubNav.open("PairFail") } }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
                 DevRow(NyaIcons.Trash, "Forget this device", danger = true) { SubNav.open("ReadOnly") }
             }
