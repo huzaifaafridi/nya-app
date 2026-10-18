@@ -100,10 +100,11 @@ abstract class StreamingChat(
             val mine = generation.get()
             job = scope.launch {
                 val answer = StringBuilder()
+                var saved: Saved? = null
                 try {
                     try {
                         val persona = persona()
-                        val saved = saveMine(text.trim()) ?: return@launch
+                        saved = saveMine(text.trim()) ?: return@launch
                         replies.reply(saved.conversation, persona).collect {
                             answer.append(it)
                             if (generation.get() == mine) draft.value = answer.toString()
@@ -114,7 +115,19 @@ abstract class StreamingChat(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Throwable) {
-                        if (generation.get() == mine) error.value = BusyMessage
+                        if (generation.get() == mine) {
+                            val partial = answer.toString().trim()
+                            if (saved != null && partial.isNotEmpty()) {
+                                try {
+                                    saveNya(saved.uid, partial)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Throwable) {
+                                    // The partial text is best effort; the busy error still shows.
+                                }
+                            }
+                            error.value = BusyMessage
+                        }
                     }
                 } finally {
                     if (generation.get() == mine) draft.value = null
