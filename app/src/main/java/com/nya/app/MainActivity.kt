@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = app.prefs.collectAsState().value ?: first
             NyaTheme(dark = when (prefs.theme) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
-                var s by remember { mutableStateOf(if (first.onboarded) Screen.Home else Screen.Welcome) }
+                var s by remember { mutableStateOf(if (first.onboarded && app.isSignedIn) Screen.Home else Screen.Welcome) }
                 var memId by remember { mutableStateOf("") }
                 var sub by remember { mutableStateOf("") }
                 val subStack = remember { mutableStateListOf<String>() }
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                     s = Screen.Sub
                 }
                 SubNav.home = { subStack.clear(); s = Screen.Home }
-                SubNav.signOut = { app.signOut(); subStack.clear(); s = Screen.Welcome }
+                SubNav.signOut = { app.signOut(this@MainActivity); subStack.clear(); s = Screen.Welcome }
                 MemNav.open = { memId = it; s = Screen.Detail }
                 val reduce = rememberReduceMotion()
                 val slide = with(LocalDensity.current) { 24.dp.roundToPx() }
@@ -76,8 +76,10 @@ class MainActivity : ComponentActivity() {
                     ) { (screen, subName) ->
                         when (screen) {
                             Screen.Welcome -> WelcomeScreen({ s = Screen.SignUp }, { s = Screen.SignIn })
-                            Screen.SignIn -> SignInScreen({ s = Screen.SignUp }, { s = Screen.Reset }, { s = Screen.Greeting })
-                            Screen.SignUp -> SignUpScreen({ s = Screen.SignIn }, { s = Screen.Verify })
+                            Screen.SignIn -> SignInScreen({ s = Screen.SignUp }, { s = Screen.Reset }, { s = Screen.Greeting },
+                                { s = Screen.Verify }, { s = if (it.isNew) Screen.Companion else Screen.Greeting })
+                            Screen.SignUp -> SignUpScreen({ s = Screen.SignIn }, { s = Screen.Verify },
+                                { s = if (it.isNew) Screen.Companion else Screen.Greeting })
                             Screen.Verify -> VerifyScreen { s = Screen.Companion }
                             Screen.Reset -> ResetScreen { s = Screen.SignIn }
                             Screen.Companion -> CompanionScreen({ s = Screen.Avatar }, { s = Screen.Verify })

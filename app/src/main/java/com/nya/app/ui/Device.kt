@@ -126,7 +126,7 @@ private fun StatCard(label: String, value: String, frac: Float, modifier: Modifi
 @Composable
 private fun DevRow(icon: String, label: String, chevron: Boolean = false, danger: Boolean = false, onClick: () -> Unit) {
     val c = LocalNya.current
-    val col = if (danger) Color(0xFFE5736A) else c.tx
+    val col = if (danger) NyaDanger else c.tx
     Row(
         Modifier.fillMaxWidth().pressScale { onClick() }.padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically

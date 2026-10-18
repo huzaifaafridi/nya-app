@@ -1,5 +1,8 @@
 package com.nya.app.viewmodel
 
+import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
@@ -33,9 +36,13 @@ class AppViewModel(private val repo: PrefsRepository, private val auth: AuthRepo
     fun setMode(mode: Int) = update { it.copy(mode = mode) }
     fun completeOnboarding() = update { it.copy(onboarded = true) }
 
-    fun signOut() {
+    val isSignedIn get() = auth.isSignedIn
+
+    fun signOut(context: Context) {
+        val appContext = context.applicationContext
         viewModelScope.launch {
             auth.signOut()
+            runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
             repo.update { it.copy(onboarded = false) }
         }
     }

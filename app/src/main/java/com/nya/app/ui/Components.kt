@@ -10,6 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -18,13 +21,27 @@ import androidx.compose.ui.unit.sp
 import com.nya.app.ui.theme.LocalNya
 
 @Composable
-fun NyaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun NyaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
     val c = LocalNya.current
     Box(
-        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = onClick).clip(RoundedCornerShape(27.dp))
-            .background(Brush.verticalGradient(listOf(c.b1, c.b2))),
+        modifier.fillMaxWidth().height(54.dp).pressScale(onClick = { if (!loading) onClick() })
+            .clip(RoundedCornerShape(27.dp)).background(Brush.verticalGradient(listOf(c.b1, c.b2))),
         contentAlignment = Alignment.Center
-    ) { Text(text, color = c.on, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
+    ) {
+        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = c.on, strokeWidth = 2.dp)
+        else Text(text, color = c.on, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+    }
+}
+
+@Composable
+fun AuthMessage(error: String?, info: String?) {
+    val c = LocalNya.current
+    if (error != null) {
+        Text(error, color = NyaDanger, fontSize = 13.sp,
+            modifier = Modifier.padding(top = 12.dp).semantics { liveRegion = LiveRegionMode.Polite })
+    } else if (info != null) {
+        Text(info, color = c.sb, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+    }
 }
 
 @Composable

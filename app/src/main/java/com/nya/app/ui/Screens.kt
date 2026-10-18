@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.R
+import com.nya.app.data.AuthUser
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.ui.theme.NyaDark
 import com.nya.app.viewmodel.AuthViewModel
@@ -54,7 +56,7 @@ fun SocialCircle(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun SocialRow() {
+fun SocialRow(onGoogle: () -> Unit) {
     val c = LocalNya.current
     val dark = c == NyaDark
     Text("or continue with", color = c.sb, fontSize = 13.sp, textAlign = TextAlign.Center,
@@ -69,7 +71,7 @@ fun SocialRow() {
         }
         Image(
             painterResource(if (dark) R.drawable.ic_google_dark else R.drawable.ic_google_light),
-            "Google", Modifier.size(54.dp).pressScale { }.clip(CircleShape)
+            "Google", Modifier.size(54.dp).pressScale(onClick = onGoogle).clip(CircleShape)
         )
         Image(
             painterResource(R.drawable.ic_facebook),
@@ -101,32 +103,41 @@ fun WelcomeScreen(onStart: () -> Unit, onSignIn: () -> Unit) {
 }
 
 @Composable
-fun SignInScreen(onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit) {
+fun SignInScreen(
+    onSignUp: () -> Unit, onForgot: () -> Unit, onHome: () -> Unit, onVerify: () -> Unit,
+    onGoogle: (AuthUser) -> Unit
+) {
     val c = LocalNya.current
+    val context = LocalContext.current
     val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
+    LaunchedEffect(Unit) { auth.clearMessages() }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     Page {
         Spacer(Modifier.height(40.dp))
         Heading("Welcome back")
         Spacer(Modifier.height(28.dp))
-        NyaField("Email", email, { email = it })
+        NyaField("Email", email, { email = it; auth.clearError() })
         Spacer(Modifier.height(16.dp))
-        NyaField("Password", pass, { pass = it }, password = true)
+        NyaField("Password", pass, { pass = it; auth.clearError() }, password = true)
         Text("Forgot password?", color = c.ac, fontSize = 13.sp,
             modifier = Modifier.padding(top = 12.dp).pressScale(onClick = onForgot))
         Spacer(Modifier.height(24.dp))
-        NyaButton("Sign in", { auth.signIn(email, pass, onHome) })
-        SocialRow()
+        NyaButton("Sign in", { auth.signIn(email, pass) { if (it.verified) onHome() else onVerify() } },
+            loading = auth.busy)
+        AuthMessage(auth.error, auth.info)
+        SocialRow { auth.google(context, onGoogle) }
         Text("New here? Create account", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignUp))
     }
 }
 
 @Composable
-fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
+fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser) -> Unit) {
     val c = LocalNya.current
+    val context = LocalContext.current
     val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
+    LaunchedEffect(Unit) { auth.clearMessages() }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -136,22 +147,24 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         Heading("Create account")
         Spacer(Modifier.height(24.dp))
-        NyaField("Full name", name, { name = it })
+        NyaField("Full name", name, { name = it; auth.clearError() })
         Spacer(Modifier.height(14.dp))
-        NyaField("Email", email, { email = it })
+        NyaField("Email", email, { email = it; auth.clearError() })
         Spacer(Modifier.height(14.dp))
-        NyaField("Password (min 8 characters)", pass, { pass = it }, password = true)
+        NyaField("Password (min 8 characters)", pass, { pass = it; auth.clearError() }, password = true)
         Spacer(Modifier.height(14.dp))
-        NyaField("Date of birth (DD/MM/YYYY)", dob, { dob = it })
+        NyaField("Date of birth (DD/MM/YYYY)", dob, { dob = it; auth.clearError() })
         Text("You must be 18 or older to use Nya.", color = c.sb, fontSize = 12.sp,
             modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(terms, { terms = it }, colors = CheckboxDefaults.colors(checkedColor = c.ac))
+            Checkbox(terms, { terms = it; auth.clearError() }, colors = CheckboxDefaults.colors(checkedColor = c.ac))
             Text("I agree to the Terms and Privacy Policy", color = c.tx, fontSize = 13.sp)
         }
         Spacer(Modifier.height(16.dp))
-        NyaButton("Create account", { auth.signUp(name, email, pass, onVerify) })
-        SocialRow()
+        NyaButton("Create account", { auth.signUp(name, email, pass, dob, terms) { onVerify() } },
+            loading = auth.busy)
+        AuthMessage(auth.error, auth.info)
+        SocialRow { auth.google(context, onGoogle) }
         Text("Already have an account? Sign in", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = onSignIn))
     }

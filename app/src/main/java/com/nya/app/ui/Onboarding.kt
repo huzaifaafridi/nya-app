@@ -7,23 +7,17 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,43 +45,17 @@ private fun StepBack(onBack: () -> Unit) {
 fun VerifyScreen(onVerified: () -> Unit) {
     val c = LocalNya.current
     val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
-    var code by remember { mutableStateOf("") }
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(Unit) { auth.clearMessages() }
     Page {
         Spacer(Modifier.height(40.dp))
         Heading("Check your email")
         Spacer(Modifier.height(12.dp))
-        Para("We sent a 6-digit code to your email. Enter it below.")
+        Para("We sent a verification link to your email. Open it, then come back and tap Continue.")
         Spacer(Modifier.height(32.dp))
-        BasicTextField(
-            value = code,
-            onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) code = it },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
-            decorationBox = { inner ->
-                Box {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { focus.requestFocus() },
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        repeat(6) { i ->
-                            val shape = RoundedCornerShape(14.dp)
-                            Box(
-                                Modifier.weight(1f).height(60.dp).clip(shape).background(c.sf)
-                                    .border(1.dp, if (i == code.length) c.ac else c.ln, shape),
-                                contentAlignment = Alignment.Center
-                            ) { Text(code.getOrNull(i)?.toString() ?: "", color = c.tx, fontSize = 24.sp) }
-                        }
-                    }
-                    Box(Modifier.size(1.dp).alpha(0f)) { inner() }
-                }
-            }
-        )
-        Spacer(Modifier.height(28.dp))
-        NyaButton("Verify", { auth.verify(code, onVerified) })
-        Text("Didn't get it? Resend code", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale { })
+        NyaButton("Continue", { auth.checkVerified(onVerified) }, loading = auth.busy)
+        AuthMessage(auth.error, auth.info)
+        Text("Didn't get it? Resend email", color = c.ac, fontSize = 14.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp).pressScale(onClick = auth::resend))
     }
 }
 
@@ -95,15 +63,17 @@ fun VerifyScreen(onVerified: () -> Unit) {
 fun ResetScreen(onBack: () -> Unit) {
     val auth = viewModel<AuthViewModel>(factory = AuthViewModel.Factory)
     var email by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { auth.clearMessages() }
     Page {
         Spacer(Modifier.height(40.dp))
         Heading("Reset password")
         Spacer(Modifier.height(12.dp))
         Para("Enter your email and we'll send you a link to set a new password.")
         Spacer(Modifier.height(28.dp))
-        NyaField("Email", email, { email = it })
+        NyaField("Email", email, { email = it; auth.clearError() })
         Spacer(Modifier.height(24.dp))
-        NyaButton("Send reset link", { auth.sendReset(email, onBack) })
+        NyaButton("Send reset link", { auth.sendReset(email) }, loading = auth.busy)
+        AuthMessage(auth.error, auth.info)
         Spacer(Modifier.height(16.dp))
         NyaOutlineButton("Back to sign in", onBack)
     }

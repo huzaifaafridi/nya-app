@@ -27,6 +27,7 @@ object SubNav {
 val LocalPrefs = compositionLocalOf { Prefs() }
 
 val NyaGreen = Color(0xFF6BCB8B)
+val NyaDanger = Color(0xFFE5736A)
 
 @Composable
 fun XTop(title: String, onBack: () -> Unit) {

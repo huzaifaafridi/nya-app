@@ -12,6 +12,6 @@ class AppContainer(context: Context) {
     val prefs: PrefsRepository = DataStorePrefsRepository(userStore)
     val memories: MemoryRepository = FakeMemoryRepository()
     val chat: ChatRepository = FakeChatRepository()
-    val auth: AuthRepository = FakeAuthRepository()
+    val auth: AuthRepository = FirebaseAuthRepository()
     val device: DeviceRepository = FakeDeviceRepository()
 }
