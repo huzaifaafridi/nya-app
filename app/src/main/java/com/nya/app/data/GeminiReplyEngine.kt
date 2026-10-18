@@ -1,14 +1,16 @@
 package com.nya.app.data
 
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.content
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 
-private const val MODEL = "gemini-2.5-flash"
+private const val MODEL = "gemini-3.8-flash"
 private const val MaxMessages = 30
 
 class GeminiReplyEngine : ReplyEngine {
@@ -21,6 +23,10 @@ class GeminiReplyEngine : ReplyEngine {
         return model.generateContentStream(turns)
             .map { it.text.orEmpty() }
             .filter { it.isNotEmpty() }
+            .catch {
+                Log.e("NyaAI", "Gemini call failed: ${it::class.java.name}: ${it.message}", it)
+                throw it
+            }
     }
 
     private fun systemPrompt(persona: ChatPersona): String {
