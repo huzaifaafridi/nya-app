@@ -26,9 +26,10 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth = FirebaseAuth.getIn
     override suspend fun signUp(name: String, email: String, password: String) = runCatching {
         val result = auth.createUserWithEmailAndPassword(email.trim(), password).await()
         val user = result.user!!
-        user.updateProfile(userProfileChangeRequest { displayName = name.trim() }).await()
-        user.sendEmailVerification().await()
-        result.toAuthUser()
+        // the account exists now, so these must not fail sign-up; Verify has "Resend email"
+        runCatching { user.updateProfile(userProfileChangeRequest { displayName = name.trim() }).await() }
+        runCatching { user.sendEmailVerification().await() }
+        AuthUser(name.trim().ifBlank { nameFromEmail(email.trim()) }, user.email.orEmpty(), user.isEmailVerified, true)
     }
 
     override suspend fun signInWithGoogle(idToken: String) = runCatching {

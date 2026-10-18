@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -28,14 +27,6 @@ class DeviceViewModel(private val repo: DeviceRepository) : ViewModel() {
     private val running = MutableStateFlow(0)
     val connecting = running.map { it > 0 }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    init {
-        // quiet reconnect to a known headband; a failure just leaves it disconnected
-        viewModelScope.launch {
-            val known = device.first { it !is Loadable.Loading }.valueOrNull()
-            if (known?.state == LinkState.Disconnected) link()
-        }
-    }
-
     fun retry() = load.retry()
 
     fun connect(onFail: () -> Unit = {}, onSuccess: () -> Unit = {}) {
@@ -46,7 +37,8 @@ class DeviceViewModel(private val repo: DeviceRepository) : ViewModel() {
 
     fun reconnect(onFail: () -> Unit) {
         viewModelScope.launch {
-            repo.disconnect()
+            // an attempt in flight is awaited, not restarted
+            if (device.value.valueOrNull()?.state != LinkState.Connecting) repo.disconnect()
             link().onFailure { onFail() }
         }
     }

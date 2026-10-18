@@ -20,7 +20,10 @@ private const val DRAIN_MS = 60_000L
 private const val RING_MS = 8_000L
 private const val MIN_BATTERY = 0.05f
 
-/** Fake headband: every 3rd connection attempt fails so the pairing error path is reachable. */
+/**
+ * Fake headband: every 3rd connection attempt fails so the pairing error path is reachable.
+ * Path: auto-connect = attempt 1, Reconnect = 2 (ok), Reconnect = 3 (fails); connecting while connected doesn't count.
+ */
 class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
     private val _state = MutableStateFlow(LinkState.Disconnected)
     private val _status = MutableStateFlow<DeviceStatus?>(null)

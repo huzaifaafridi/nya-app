@@ -45,12 +45,11 @@ fun DeviceScreen() {
     ) {
         Text("Device", color = c.tx, fontSize = 34.sp, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic,
             modifier = Modifier.staggerIn(0))
-        LoadableContent(state, vm::retry) { device ->
-            if (device == null) {
+        LoadableContent(state, vm::retry) { d ->
+            if (d == null) {
                 EmptyState("No headband paired", "Pair your Nya headband to see battery, storage and updates.", Modifier.padding(vertical = 40.dp))
                 return@LoadableContent
             }
-            val d = device
             Spacer(Modifier.height(20.dp))
             Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically) {
                 NyaOrb(84.dp) { NyaIcon(NyaIcons.Device, tint = c.ac, iconSize = 44.dp, strokeW = 1.2f) }

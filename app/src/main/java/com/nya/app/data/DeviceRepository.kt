@@ -12,9 +12,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -59,7 +59,15 @@ class RoomDeviceRepository(
                 if (id == null) emptyFlow() else ble.status.filterNotNull().map { id to it }
             }.collect { (id, s) -> dao.updateReadings(id, s.battery, s.storageUsedGb, s.storageTotalGb, s.firmware) }
         }
-        scope.launch { uid.distinctUntilChanged().drop(1).collect { ble.disconnect() } }
+        scope.launch {
+            // new account or sign-out drops the link; a known headband reconnects quietly
+            uid.distinctUntilChanged().collectLatest { id ->
+                ble.disconnect()
+                if (id == null) return@collectLatest
+                seed.seed(id)
+                if (dao.observe(id).first() != null) ble.connect()
+            }
+        }
     }
 
     override suspend fun connect(): Result<Unit> = ble.connect().onSuccess {
