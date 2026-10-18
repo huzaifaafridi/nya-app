@@ -6,15 +6,18 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nya.app.NyaApp
-import com.nya.app.data.Memory
 import com.nya.app.data.MemoryRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class MemoriesViewModel(memories: MemoryRepository) : ViewModel() {
-    val memories: StateFlow<List<Memory>> =
-        memories.memories.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+class MemoriesViewModel(private val repo: MemoryRepository) : ViewModel() {
+    private val load = Retryable(viewModelScope, repo.memories)
+    val memories = load.state
+
+    fun retry() = load.retry()
+
+    fun delete(id: Long) {
+        viewModelScope.launch { repo.delete(id) }
+    }
 
     companion object {
         val Factory = viewModelFactory {

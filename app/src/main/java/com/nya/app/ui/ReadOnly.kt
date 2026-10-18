@@ -22,7 +22,7 @@ import com.nya.app.viewmodel.MemoriesViewModel
 fun ReadOnlyScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val vm = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
-    val memories by vm.memories.collectAsState()
+    val state = vm.memories.collectAsState().value
     Column(Modifier.fillMaxSize().nyaBg()) {
         XTop("Memories", onBack)
         Column(Modifier.padding(horizontal = 20.dp)) {
@@ -35,19 +35,22 @@ fun ReadOnlyScreen(onBack: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(18.dp))
-            memories.take(3).forEach { m ->
-                Row(
-                    Modifier.padding(bottom = 12.dp).fillMaxWidth().alpha(0.6f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
-                            .background(m.scene.brush())
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(m.title, color = c.tx, fontSize = 15.sp)
-                        Text(m.time, color = c.sb, fontSize = 12.sp)
+            LoadableContent(state, vm::retry) { memories ->
+                if (memories.isEmpty()) EmptyState("No memories yet", "Capture a moment and it will show up here.", Modifier.padding(vertical = 40.dp))
+                memories.take(3).forEach { m ->
+                    Row(
+                        Modifier.padding(bottom = 12.dp).fillMaxWidth().alpha(0.6f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
+                                .background(m.scene.brush())
+                        )
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text(m.title, color = c.tx, fontSize = 15.sp)
+                            Text(memoryTime(m.createdAt), color = c.sb, fontSize = 12.sp)
+                        }
                     }
                 }
             }

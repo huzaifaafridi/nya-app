@@ -6,14 +6,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nya.app.NyaApp
-import com.nya.app.data.DeviceInfo
 import com.nya.app.data.DeviceRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 
 class DeviceViewModel(private val repo: DeviceRepository) : ViewModel() {
-    val device: StateFlow<DeviceInfo?> = repo.device.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val load = Retryable(viewModelScope, repo.device)
+    val device = load.state
+
+    fun retry() = load.retry()
 
     fun transfers() = repo.transfers()
 

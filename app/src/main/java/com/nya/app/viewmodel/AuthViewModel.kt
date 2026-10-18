@@ -12,7 +12,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nya.app.NyaApp
 import com.nya.app.data.AuthRepository
 import com.nya.app.data.AuthUser
-import com.nya.app.data.PrefsRepository
+import com.nya.app.data.ProfileRepository
 import com.nya.app.data.authMessage
 import com.nya.app.data.googleIdToken
 import kotlinx.coroutines.launch
@@ -23,7 +23,7 @@ import java.time.format.ResolverStyle
 
 private val DobFormat = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT)
 
-class AuthViewModel(private val auth: AuthRepository, private val prefs: PrefsRepository) : ViewModel() {
+class AuthViewModel(private val auth: AuthRepository, private val profile: ProfileRepository) : ViewModel() {
     var busy by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
@@ -50,7 +50,7 @@ class AuthViewModel(private val auth: AuthRepository, private val prefs: PrefsRe
 
     private suspend fun finish(result: Result<AuthUser>, onDone: (AuthUser) -> Unit) {
         result.onSuccess { user ->
-            prefs.update { it.copy(name = user.name) }
+            profile.update { it.copy(name = user.name) }
             onDone(user)
         }.onFailure { error = it.authMessage() }
     }
@@ -126,7 +126,7 @@ class AuthViewModel(private val auth: AuthRepository, private val prefs: PrefsRe
         val Factory = viewModelFactory {
             initializer {
                 val c = (this[APPLICATION_KEY] as NyaApp).container
-                AuthViewModel(c.auth, c.prefs)
+                AuthViewModel(c.auth, c.profile)
             }
         }
     }

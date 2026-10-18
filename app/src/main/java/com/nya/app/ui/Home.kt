@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.AppViewModel
 import com.nya.app.viewmodel.MemoriesViewModel
+import com.nya.app.viewmodel.valueOrNull
 import java.util.Calendar
 
 object Nav { var toChat: () -> Unit = {} }
@@ -113,7 +114,9 @@ fun HomeScreen(onSeeAll: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
-    val items by viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory).memories.collectAsState()
+    val memories = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
+    val state = memories.memories.collectAsState().value
+    val items = state.valueOrNull().orEmpty()
     val greet = remember { !homeGreeted }
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -134,7 +137,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
 
         Spacer(Modifier.height(22.dp))
         items.firstOrNull()?.let {
-            HomeHero(it.scene, it.title, "Latest memory · ${it.time}", onClick = { MemNav.open(it.id) }, modifier = Modifier.staggerIn(1))
+            HomeHero(it.scene, it.title, "Latest memory · ${memoryTime(it.createdAt)}", onClick = { MemNav.open(it.id) }, modifier = Modifier.staggerIn(1))
         }
 
         Spacer(Modifier.height(20.dp))
@@ -198,6 +201,9 @@ fun HomeScreen(onSeeAll: () -> Unit) {
             Text("See all", color = c.ac, fontSize = 13.sp, modifier = Modifier.pressScale { onSeeAll() })
         }
         Spacer(Modifier.height(10.dp))
-        RecentRow(items, { MemNav.open(it) }, start = 6)
+        LoadableContent(state, memories::retry) {
+            if (it.isEmpty()) EmptyState("No memories yet", "Capture a moment and it will show up here.", Modifier.padding(vertical = 40.dp))
+            else RecentRow(it, { MemNav.open(it) }, start = 6)
+        }
     }
 }

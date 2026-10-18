@@ -19,13 +19,14 @@ data class Prefs(
 )
 
 data class Memory(
-    val id: String,
+    val id: Long,
     val title: String,
     val place: String,
-    val time: String,
     val note: String,
     val scene: Scene,
-    val clipSeconds: Int? = null // null = photo
+    val createdAt: Long, // epoch ms
+    val clipSeconds: Int? = null, // null = photo
+    val mediaUri: String? = null
 )
 
 data class ChatMessage(val id: Long, val text: String, val mine: Boolean)

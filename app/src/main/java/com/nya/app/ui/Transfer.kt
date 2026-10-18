@@ -20,7 +20,8 @@ import com.nya.app.viewmodel.DeviceViewModel
 fun TransferScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
-    val items by remember { vm.transfers() }.collectAsState(emptyList())
+    val loaded by remember { vm.transfers() }.collectAsState(null)
+    val items = loaded.orEmpty()
     val done = items.count { it.progress >= 1f }
 
     Column(Modifier.fillMaxSize().nyaBg()) {
@@ -33,6 +34,7 @@ fun TransferScreen(onBack: () -> Unit) {
             Text("$done of ${items.size} done", color = c.sb, fontSize = 14.sp,
                 modifier = Modifier.padding(top = 4.dp, bottom = 20.dp))
 
+            if (loaded == null) LoadingState(Modifier.padding(vertical = 40.dp))
             items.forEach { t ->
                 XCard(Modifier.padding(bottom = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

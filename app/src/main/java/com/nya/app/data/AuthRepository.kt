@@ -1,9 +1,13 @@
 package com.nya.app.data
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+
 data class AuthUser(val name: String, val email: String, val verified: Boolean, val isNew: Boolean)
 
 interface AuthRepository {
     val isSignedIn: Boolean
+    val uid: Flow<String?>
     suspend fun signIn(email: String, password: String): Result<AuthUser>
     suspend fun signUp(name: String, email: String, password: String): Result<AuthUser>
     suspend fun signInWithGoogle(idToken: String): Result<AuthUser>
@@ -18,6 +22,7 @@ fun nameFromEmail(email: String) =
 
 class FakeAuthRepository : AuthRepository {
     override val isSignedIn = true
+    override val uid: Flow<String?> = flowOf("fake-user")
 
     override suspend fun signIn(email: String, password: String) =
         Result.success(AuthUser(nameFromEmail(email), email, verified = true, isNew = false))

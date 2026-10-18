@@ -118,7 +118,7 @@ fun HomeHero(scene: Scene, title: String, sub: String, onClick: () -> Unit, modi
 
 /** Home: row of 3 recent memories */
 @Composable
-fun RecentRow(items: List<Memory>, onOpen: (String) -> Unit, start: Int = 0) {
+fun RecentRow(items: List<Memory>, onOpen: (Long) -> Unit, start: Int = 0) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         items.take(3).forEachIndexed { i, m ->
             NyaThumb(m.scene, Modifier.weight(1f).height(84.dp), onClick = { onOpen(m.id) }, index = start + i)
@@ -130,13 +130,13 @@ private fun Memory.badge() = clipSeconds?.let { "Clip · ${it / 60}:%02d".format
 
 // a thumb for one grid slot; slots without a memory stay empty
 @Composable
-private fun Slot(m: Memory?, modifier: Modifier, onOpen: (String) -> Unit, index: Int) {
+private fun Slot(m: Memory?, modifier: Modifier, onOpen: (Long) -> Unit, index: Int) {
     if (m != null) NyaThumb(m.scene, modifier, m.badge(), m.clipSeconds != null, { onOpen(m.id) }, index)
 }
 
 /** Memories: the masonry grid from the design */
 @Composable
-fun MemoriesGrid(items: List<Memory>, onOpen: (String) -> Unit, start: Int = 0) {
+fun MemoriesGrid(items: List<Memory>, onOpen: (Long) -> Unit, start: Int = 0) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Slot(items.getOrNull(0), Modifier.weight(1f).height(190.dp), onOpen, start)

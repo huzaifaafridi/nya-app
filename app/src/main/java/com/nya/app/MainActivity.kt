@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
             val prefs = app.prefs.collectAsState().value ?: first
             NyaTheme(dark = when (prefs.theme) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
                 var s by remember { mutableStateOf(if (first.onboarded && app.isSignedIn) Screen.Home else Screen.Welcome) }
-                var memId by remember { mutableStateOf("") }
+                var memId by remember { mutableLongStateOf(0L) }
                 var sub by remember { mutableStateOf("") }
                 val subStack = remember { mutableStateListOf<String>() }
                 Nav.toChat = { s = Screen.Chat }

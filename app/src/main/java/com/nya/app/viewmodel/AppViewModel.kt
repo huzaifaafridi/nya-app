@@ -9,32 +9,46 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nya.app.NyaApp
+import com.nya.app.data.AppSettings
 import com.nya.app.data.AuthRepository
 import com.nya.app.data.Companion as CompanionType
 import com.nya.app.data.Gender
 import com.nya.app.data.Prefs
-import com.nya.app.data.PrefsRepository
+import com.nya.app.data.Profile
+import com.nya.app.data.ProfileRepository
+import com.nya.app.data.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class AppViewModel(private val repo: PrefsRepository, private val auth: AuthRepository) : ViewModel() {
-    val prefs: StateFlow<Prefs?> = repo.prefs.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+class AppViewModel(
+    private val settings: SettingsRepository,
+    private val profile: ProfileRepository,
+    private val auth: AuthRepository
+) : ViewModel() {
+    val prefs: StateFlow<Prefs?> = combine(settings.settings, profile.profile) { s, p ->
+        Prefs(p.name, p.companion, p.skin, p.gender, p.voice, s.theme, s.quiet, s.mode, s.onboarded)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private fun update(transform: (Prefs) -> Prefs) {
-        viewModelScope.launch { repo.update(transform) }
+    private fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        viewModelScope.launch { settings.update(transform) }
     }
 
-    fun setName(name: String) = update { it.copy(name = name) }
-    fun setCompanion(companion: CompanionType) = update { it.copy(companion = companion) }
-    fun setSkin(argb: Int) = update { it.copy(skin = argb) }
-    fun setGender(gender: Gender) = update { it.copy(gender = gender) }
-    fun setVoice(voice: Int) = update { it.copy(voice = voice) }
-    fun setTheme(theme: Int) = update { it.copy(theme = theme) }
-    fun setQuiet(quiet: Boolean) = update { it.copy(quiet = quiet) }
-    fun setMode(mode: Int) = update { it.copy(mode = mode) }
-    fun completeOnboarding() = update { it.copy(onboarded = true) }
+    private fun updateProfile(transform: (Profile) -> Profile) {
+        viewModelScope.launch { profile.update(transform) }
+    }
+
+    fun setName(name: String) = updateProfile { it.copy(name = name) }
+    fun setCompanion(companion: CompanionType) = updateProfile { it.copy(companion = companion) }
+    fun setSkin(argb: Int) = updateProfile { it.copy(skin = argb) }
+    fun setGender(gender: Gender) = updateProfile { it.copy(gender = gender) }
+    fun setVoice(voice: Int) = updateProfile { it.copy(voice = voice) }
+    fun setTheme(theme: Int) = updateSettings { it.copy(theme = theme) }
+    fun setQuiet(quiet: Boolean) = updateSettings { it.copy(quiet = quiet) }
+    fun setMode(mode: Int) = updateSettings { it.copy(mode = mode) }
+    fun completeOnboarding() = updateSettings { it.copy(onboarded = true) }
 
     val isSignedIn get() = auth.isSignedIn
 
@@ -43,7 +57,7 @@ class AppViewModel(private val repo: PrefsRepository, private val auth: AuthRepo
         viewModelScope.launch {
             auth.signOut()
             runCatching { CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest()) }
-            repo.update { it.copy(onboarded = false) }
+            settings.update { it.copy(onboarded = false) }
         }
     }
 
@@ -51,7 +65,7 @@ class AppViewModel(private val repo: PrefsRepository, private val auth: AuthRepo
         val Factory = viewModelFactory {
             initializer {
                 val c = (this[APPLICATION_KEY] as NyaApp).container
-                AppViewModel(c.prefs, c.auth)
+                AppViewModel(c.settings, c.profile, c.auth)
             }
         }
     }

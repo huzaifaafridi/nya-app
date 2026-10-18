@@ -1,27 +1,54 @@
 package com.nya.app.data
 
+import com.nya.app.data.local.MemoryDao
+import com.nya.app.data.local.SeedDao
+import com.nya.app.data.local.toMemory
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 interface MemoryRepository {
     val memories: Flow<List<Memory>>
+    suspend fun delete(id: Long)
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class RoomMemoryRepository(
+    private val dao: MemoryDao,
+    private val seed: SeedDao,
+    uid: Flow<String?>
+) : MemoryRepository {
+    override val memories: Flow<List<Memory>> = uid.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList()) else flow {
+            seed.seed(id)
+            emitAll(dao.observe(id).map { list -> list.map { it.toMemory() } })
+        }
+    }
+
+    override suspend fun delete(id: Long) = dao.delete(id)
 }
 
 class FakeMemoryRepository : MemoryRepository {
-    override val memories: Flow<List<Memory>> = MutableStateFlow(
+    private val now = System.currentTimeMillis()
+    private val state = MutableStateFlow(
         listOf(
-            Memory("1", "Sunset at the pier", "Karachi", "Today, 6:42 PM",
-                "Golden hour by the water. You said it felt like the day finally slowed down.", Scene.Sea, 8),
-            Memory("2", "Beach day", "Sea View", "Fri, 4:15 PM",
-                "Windy, cold water, and the best chai afterwards.", Scene.Mount),
-            Memory("3", "Late night idea", "Home", "Sun, 11:48 PM",
-                "A voice note about making memories searchable by feeling.", Scene.Dusk),
-            Memory("4", "Morning walk", "Park", "Mon, 7:05 AM",
-                "30 minutes, no phone. You noticed the birds near the east gate.", Scene.Forest, 6),
-            Memory("5", "Coffee with Ali", "Clifton", "Yesterday, 11:10 AM",
-                "Talked about the app launch. Ali suggested a softer onboarding.", Scene.Yoga),
-            Memory("6", "Family dinner", "Home", "Sat, 8:30 PM",
-                "Everyone together. Biryani, lots of laughing.", Scene.City)
+            Memory(1, "Sunset at the pier", "Karachi",
+                "Golden hour by the water. You said it felt like the day finally slowed down.", Scene.Sea, now, 8),
+            Memory(2, "Beach day", "Sea View",
+                "Windy, cold water, and the best chai afterwards.", Scene.Mount, now - DayMs)
         )
     )
+    override val memories: Flow<List<Memory>> = state
+
+    override suspend fun delete(id: Long) = state.update { list -> list.filterNot { it.id == id } }
+
+    private companion object {
+        const val DayMs = 24 * 60 * 60 * 1000L
+    }
 }

@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nya.app.ui.theme.LocalNya
+import com.nya.app.viewmodel.Loadable
 
 @Composable
 fun NyaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, loading: Boolean = false) {
@@ -46,6 +49,47 @@ fun AuthMessage(error: String?, info: String?) {
             modifier = Modifier.padding(top = 12.dp).semantics { liveRegion = LiveRegionMode.Polite })
     } else if (info != null) {
         Text(info, color = c.sb, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+    }
+}
+
+@Composable
+fun LoadingState(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(
+            Modifier.size(28.dp).semantics { contentDescription = "Loading" },
+            color = LocalNya.current.ac, strokeWidth = 2.dp
+        )
+    }
+}
+
+@Composable
+fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
+    val c = LocalNya.current
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(title, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(body, color = c.sb, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+        action?.invoke()
+    }
+}
+
+@Composable
+fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(message, color = NyaDanger, fontSize = 14.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        Text("Try again", color = LocalNya.current.ac, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 10.dp).pressScale { onRetry() })
+    }
+}
+
+/** Shows loading / error in the content area, and [content] once [state] is ready. */
+@Composable
+fun <T> LoadableContent(state: Loadable<T>, onRetry: () -> Unit, content: @Composable (T) -> Unit) {
+    val pad = Modifier.padding(vertical = 40.dp)
+    when (state) {
+        Loadable.Loading -> LoadingState(pad)
+        is Loadable.Failed -> ErrorState(state.message, onRetry, pad)
+        is Loadable.Ready -> content(state.value)
     }
 }
 

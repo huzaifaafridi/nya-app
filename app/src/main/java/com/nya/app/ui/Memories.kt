@@ -27,29 +27,33 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.MemoriesViewModel
+import com.nya.app.viewmodel.valueOrNull
 
-object MemNav { var open: (String) -> Unit = {} }
+object MemNav { var open: (Long) -> Unit = {} }
 
 @Composable
-fun MemoryDetailScreen(id: String, onBack: () -> Unit) {
+fun MemoryDetailScreen(id: Long, onBack: () -> Unit) {
     val c = LocalNya.current
     val vm = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
-    val m = vm.memories.collectAsState().value.firstOrNull { it.id == id }
+    val state = vm.memories.collectAsState().value
+    val m = state.valueOrNull().orEmpty().firstOrNull { it.id == id }
     Column(Modifier.fillMaxSize().nyaBg().verticalScroll(rememberScrollState())) {
         Box(Modifier.fillMaxWidth().height(340.dp).then(if (m != null) Modifier.background(m.scene.brush()) else Modifier)) {
             Text("‹", color = Color.White, fontSize = 34.sp,
                 modifier = Modifier.statusBarsPadding().padding(20.dp).pressScale { onBack() })
         }
-        if (m != null) Column(Modifier.padding(24.dp)) {
+        if (m == null) LoadableContent(state, vm::retry) {
+            EmptyState("Memory not found", "It may have been deleted.", Modifier.padding(24.dp))
+        } else Column(Modifier.padding(24.dp)) {
             Text(m.title, color = c.tx, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-            Text("${m.time}  ·  ${m.place}", color = c.sb, fontSize = 13.sp,
+            Text("${memoryTime(m.createdAt)}  ·  ${m.place}", color = c.sb, fontSize = 13.sp,
                 modifier = Modifier.padding(top = 6.dp))
             Text("What Nya remembers", color = c.ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(top = 26.dp, bottom = 8.dp))
             Text(m.note, color = c.tx, fontSize = 16.sp, lineHeight = 24.sp)
             Row(Modifier.padding(top = 30.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 NyaButton("Share", onClick = { }, modifier = Modifier.weight(1f))
-                NyaOutlineButton("Delete", onClick = { }, modifier = Modifier.weight(1f))
+                NyaOutlineButton("Delete", onClick = { vm.delete(id); onBack() }, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -58,7 +62,7 @@ fun MemoryDetailScreen(id: String, onBack: () -> Unit) {
 fun MemoriesScreen() {
     val c = LocalNya.current
     val vm = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
-    val items by vm.memories.collectAsState()
+    val state = vm.memories.collectAsState().value
     var f by remember { mutableStateOf(0) }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
@@ -93,6 +97,9 @@ fun MemoriesScreen() {
         Spacer(Modifier.height(14.dp))
         Text("YESTERDAY", color = c.sb, fontSize = 11.sp, letterSpacing = 2.sp, modifier = Modifier.staggerIn(3))
         Spacer(Modifier.height(10.dp))
-        MemoriesGrid(items, { MemNav.open(it) }, start = 4)
+        LoadableContent(state, vm::retry) {
+            if (it.isEmpty()) EmptyState("No memories yet", "Capture a moment and it will show up here.", Modifier.padding(vertical = 40.dp))
+            else MemoriesGrid(it, { MemNav.open(it) }, start = 4)
+        }
     }
 }

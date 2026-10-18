@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.ChatViewModel
+import com.nya.app.viewmodel.Loadable
+import com.nya.app.viewmodel.valueOrNull
 import kotlinx.coroutines.delay
 
 @Composable
@@ -33,17 +35,19 @@ fun ChatScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val vm = viewModel<ChatViewModel>(factory = ChatViewModel.Factory)
-    val msgs by vm.messages.collectAsState()
+    val state by vm.messages.collectAsState()
+    val msgs = state.valueOrNull().orEmpty()
     val typing by vm.typing.collectAsState()
     var input by remember { mutableStateOf("") }
     var speaking by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
-    val shown = remember { mutableSetOf<Int>() }
-    // messages already there when the screen opened are neither animated nor spoken again
-    val opened = remember { msgs.size }
+    val shown = remember { mutableSetOf<Long>() }
+    // messages already there when the history first loaded are neither animated nor spoken again
+    val loaded = state is Loadable.Ready
+    val lastOld = remember(loaded) { msgs.maxOfOrNull { it.id } ?: 0L }
 
     fun send(t: String = input) {
-        if (t.isNotBlank()) {
+        if (loaded && t.isNotBlank()) {
             vm.send(t)
             input = ""
         }
@@ -51,9 +55,10 @@ fun ChatScreen(onBack: () -> Unit) {
 
     LaunchedEffect(msgs.size) {
         speaking = false
-        if (msgs.size > maxOf(opened, 1) && !msgs.last().mine) {
+        val last = msgs.lastOrNull()
+        if (last != null && last.id > lastOld && !last.mine) {
             val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
-            if (!prefs.quiet && voice != null) VoiceEngine.speak(msgs.last().text, voice)
+            if (!prefs.quiet && voice != null) VoiceEngine.speak(last.text, voice)
             else {
                 speaking = true
                 delay(1600)
@@ -82,15 +87,17 @@ fun ChatScreen(onBack: () -> Unit) {
             },
             mouth = if (VoiceEngine.speaking) VoiceEngine.mouth else null)
 
-        LazyColumn(
+        if (!loaded) Box(Modifier.weight(1f).fillMaxWidth()) {
+            LoadableContent(state, vm::retry) {}
+        } else LazyColumn(
             state = list,
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             contentPadding = PaddingValues(top = 16.dp)
         ) {
-            itemsIndexed(msgs) { i, m ->
+            items(msgs, key = { it.id }) { m ->
                 // animate each message once, when it first arrives (not when scrolled back into view)
-                val fresh = remember { shown.add(i) && (i >= opened || opened <= 1) }
+                val fresh = remember { shown.add(m.id) && m.id > lastOld }
                 Box(Modifier.staggerIn(0, animate = fresh)) {
                     if (m.mine) UserBubble(m.text) else AiBubble(m.text)
                 }
