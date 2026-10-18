@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -132,6 +133,9 @@ fun SignInScreen(
     }
 }
 
+private fun dobText(d: String) =
+    if (d.length == 8) "${d.take(2)}/${d.substring(2, 4)}/${d.drop(4)}" else d
+
 @Composable
 fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser) -> Unit) {
     val c = LocalNya.current
@@ -141,6 +145,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
     var terms by remember { mutableStateOf(false) }
     Page {
@@ -153,7 +158,10 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
         Spacer(Modifier.height(14.dp))
         NyaField("Password (min 8 characters)", pass, { pass = it; auth.clearError() }, password = true)
         Spacer(Modifier.height(14.dp))
-        NyaField("Date of birth (DD/MM/YYYY)", dob, { dob = it; auth.clearError() })
+        NyaField("Confirm password", confirm, { confirm = it; auth.clearError() }, password = true)
+        Spacer(Modifier.height(14.dp))
+        NyaField("Date of birth (DD/MM/YYYY)", dob, { dob = it.filter(Char::isDigit).take(8); auth.clearError() },
+            keyboardType = KeyboardType.Number, transformation = DateTransformation)
         Text("You must be 18 or older to use Nya.", color = c.sb, fontSize = 12.sp,
             modifier = Modifier.padding(top = 6.dp))
         Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +169,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
             Text("I agree to the Terms and Privacy Policy", color = c.tx, fontSize = 13.sp)
         }
         Spacer(Modifier.height(16.dp))
-        NyaButton("Create account", { auth.signUp(name, email, pass, dob, terms) { onVerify() } },
+        NyaButton("Create account", { auth.signUp(name, email, pass, confirm, dobText(dob), terms) { onVerify() } },
             loading = auth.busy)
         AuthMessage(auth.error, auth.info)
         SocialRow { auth.google(context, onGoogle) }

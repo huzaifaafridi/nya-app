@@ -67,12 +67,13 @@ class AuthViewModel(private val auth: AuthRepository, private val prefs: PrefsRe
         launchBusy { finish(auth.signIn(email, pass), onDone) }
     }
 
-    fun signUp(name: String, email: String, pass: String, dob: String, terms: Boolean, onDone: (AuthUser) -> Unit) {
+    fun signUp(name: String, email: String, pass: String, confirm: String, dob: String, terms: Boolean, onDone: (AuthUser) -> Unit) {
         val age = ageOf(dob)
         val problem = when {
             name.isBlank() -> "Enter your name."
             email.isBlank() -> "Enter your email."
             pass.length < 8 -> "Password must be at least 8 characters."
+            pass != confirm -> "Passwords don't match."
             age == null -> "Enter your date of birth as DD/MM/YYYY."
             age < 18 -> "You must be 18 or older to use Nya."
             !terms -> "Please agree to the Terms and Privacy Policy."

@@ -3,6 +3,7 @@ package com.nya.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,8 +14,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,19 +61,42 @@ fun NyaOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Mod
 }
 
 @Composable
-fun NyaField(label: String, value: String, onChange: (String) -> Unit, password: Boolean = false) {
+fun NyaField(
+    label: String, value: String, onChange: (String) -> Unit, password: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text, transformation: VisualTransformation = VisualTransformation.None
+) {
     val c = LocalNya.current
     Column {
         Text(label, color = c.sb, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
         OutlinedTextField(
             value = value, onValueChange = onChange, singleLine = true,
             modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (password) PasswordVisualTransformation() else transformation,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = c.ac, unfocusedBorderColor = c.ln,
                 focusedTextColor = c.tx, unfocusedTextColor = c.tx, cursorColor = c.ac,
                 focusedContainerColor = c.sf, unfocusedContainerColor = c.sf
             )
         )
+    }
+}
+/** Shows a digits-only string as DD/MM/YYYY; slashes appear only once more digits follow them. */
+object DateTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val d = text.text
+        val shown = buildString {
+            d.forEachIndexed { i, ch ->
+                if (i == 2 || i == 4) append('/')
+                append(ch)
+            }
+        }
+        return TransformedText(AnnotatedString(shown), object : OffsetMapping {
+            override fun originalToTransformed(offset: Int) =
+                offset + (if (offset > 2) 1 else 0) + (if (offset > 4) 1 else 0)
+
+            override fun transformedToOriginal(offset: Int) =
+                (offset - (if (offset > 2) 1 else 0) - (if (offset > 5) 1 else 0)).coerceIn(0, d.length)
+        })
     }
 }
