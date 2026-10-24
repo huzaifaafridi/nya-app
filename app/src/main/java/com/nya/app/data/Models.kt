@@ -16,6 +16,7 @@ data class Prefs(
     val skin: Int = 0xFFE0AC84.toInt(), // ARGB
     val gender: Gender = Gender.Female,
     val voice: Int = 0,
+    val notifications: Boolean = true,
     val theme: Int = 0, // 0 Auto, 1 Light, 2 Dark
     val quiet: Boolean = false,
     val mode: Int = 2, // 0 Travel, 1 Focus, 2 Wellness, 3 Creator

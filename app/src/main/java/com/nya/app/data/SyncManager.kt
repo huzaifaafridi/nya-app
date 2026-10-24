@@ -7,6 +7,8 @@ import com.nya.app.data.local.DeviceDao
 import com.nya.app.data.local.DeviceEntity
 import com.nya.app.data.local.MemoryDao
 import com.nya.app.data.local.MemoryEntity
+import com.nya.app.data.local.ProfileDao
+import com.nya.app.data.local.ProfileEntity
 import com.nya.app.data.local.SeedDao
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -39,6 +41,7 @@ class SyncManager(
     private val memoryDao: MemoryDao,
     private val chatDao: ChatDao,
     private val deviceDao: DeviceDao,
+    private val profileDao: ProfileDao,
     private val seedDao: SeedDao,
     private val scope: CoroutineScope
 ) {
@@ -52,6 +55,7 @@ class SyncManager(
         launch { mirrorMemories(uid, uploaded) }
         launch { cloud.messages(uid).collect { chatDao.insertAll(it.map { doc -> doc.toEntity(uid) }) } }
         launch { cloud.device(uid).collect { doc -> if (doc != null) deviceDao.upsert(doc.toEntity(uid)) } }
+        launch { mirrorProfile(uid) }
         uploaded.complete(registerWithRetry(uid))
     }
 
@@ -82,6 +86,7 @@ class SyncManager(
         memories.forEach { cloud.putMemory(uid, it.toDoc(it.mediaUri?.let { uri -> media.publish(uri) })) }
         chatDao.history(uid).forEach { cloud.putMessage(uid, it.toDoc()) }
         deviceDao.get(uid)?.let { cloud.putDevice(uid, it.toDoc()) }
+        profileDao.get(uid)?.let { cloud.putProfile(uid, it.toDoc()) }
         return memories.mapTo(HashSet()) { it.remoteId }
     }
 
@@ -95,6 +100,28 @@ class SyncManager(
             }
         }
     }
+
+    /** Last writer wins on updatedAt; applying a remote profile never pushes, and a push makes the next snapshot equal. */
+    private suspend fun mirrorProfile(uid: String) {
+        cloud.profile(uid).collect { snapshot ->
+            val local = profileDao.get(uid)
+            when (profileAction(local, snapshot.doc, snapshot.fromServer)) {
+                ProfileAction.Apply -> snapshot.doc?.let { profileDao.upsertIfNewer(it.toEntity(uid)) }
+                ProfileAction.Push -> local?.let { cloud.putProfile(uid, it.toDoc()) }
+                ProfileAction.None -> Unit
+            }
+        }
+    }
+}
+
+internal enum class ProfileAction { None, Apply, Push }
+
+/** Only a server snapshot proves the cloud lacks or has an older profile, so only it can trigger a push. */
+internal fun profileAction(local: ProfileEntity?, remote: ProfileDoc?, fromServer: Boolean): ProfileAction = when {
+    remote != null && (local == null || remote.updatedAt > local.updatedAt) -> ProfileAction.Apply
+    !fromServer || local == null -> ProfileAction.None
+    remote == null || local.updatedAt > remote.updatedAt -> ProfileAction.Push
+    else -> ProfileAction.None
 }
 
 /** Local ids the server no longer has, except the rows uploaded after that snapshot. */
@@ -122,3 +149,7 @@ internal fun DeviceEntity.toDoc() =
 
 internal fun DeviceDoc.toEntity(uid: String) =
     DeviceEntity(uid, name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware)
+
+internal fun ProfileEntity.toDoc() = ProfileDoc(name, companion, skin, gender, voice, notifications, updatedAt)
+
+internal fun ProfileDoc.toEntity(uid: String) = ProfileEntity(uid, name, companion, skin, gender, voice, notifications, updatedAt)

@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.R
 import com.nya.app.data.AuthUser
+import com.nya.app.data.MaxNameLength
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.ui.theme.NyaDark
 import com.nya.app.viewmodel.AuthViewModel
@@ -155,7 +156,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
         Spacer(Modifier.height(24.dp))
         Heading("Create account")
         Spacer(Modifier.height(24.dp))
-        NyaField("Full name", name, { name = it; auth.clearError() })
+        NyaField("Full name", name, { name = it.take(MaxNameLength); auth.clearError() })
         Spacer(Modifier.height(14.dp))
         NyaField("Email", email, { email = it; auth.clearError() })
         Spacer(Modifier.height(14.dp))

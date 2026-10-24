@@ -80,6 +80,24 @@ interface DeviceDao {
     suspend fun updateReadings(uid: String, battery: Float, used: Float, total: Float, firmware: String)
 }
 
+@Dao
+abstract class ProfileDao {
+    @Query("SELECT * FROM ProfileEntity WHERE uid = :uid")
+    abstract fun observe(uid: String): Flow<ProfileEntity?>
+
+    @Query("SELECT * FROM ProfileEntity WHERE uid = :uid")
+    abstract suspend fun get(uid: String): ProfileEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun upsert(profile: ProfileEntity)
+
+    /** Atomic, so a local edit made meanwhile is never overwritten by an older remote row. */
+    @Transaction
+    open suspend fun upsertIfNewer(profile: ProfileEntity) {
+        if ((get(profile.uid)?.updatedAt ?: Long.MIN_VALUE) < profile.updatedAt) upsert(profile)
+    }
+}
+
 /** Fills a new account with demo memories and a paired headband, once. */
 @Dao
 abstract class SeedDao {
@@ -144,14 +162,25 @@ val Migration1To2 = object : Migration(1, 2) {
     }
 }
 
+val Migration2To3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `ProfileEntity` (`uid` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`companion` TEXT NOT NULL, `skin` INTEGER NOT NULL, `gender` TEXT NOT NULL, `voice` INTEGER NOT NULL, " +
+                "`notifications` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`uid`))"
+        )
+    }
+}
+
 @Database(
-    entities = [MemoryEntity::class, ChatMessageEntity::class, DeviceEntity::class, SeedMark::class],
-    version = 2,
+    entities = [MemoryEntity::class, ChatMessageEntity::class, DeviceEntity::class, ProfileEntity::class, SeedMark::class],
+    version = 3,
     exportSchema = false
 )
 abstract class NyaDatabase : RoomDatabase() {
     abstract fun memoryDao(): MemoryDao
     abstract fun chatDao(): ChatDao
     abstract fun deviceDao(): DeviceDao
+    abstract fun profileDao(): ProfileDao
     abstract fun seedDao(): SeedDao
 }

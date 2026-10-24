@@ -4,8 +4,11 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.nya.app.data.ChatMessage
+import com.nya.app.data.Companion
 import com.nya.app.data.DeviceInfo
+import com.nya.app.data.Gender
 import com.nya.app.data.Memory
+import com.nya.app.data.Profile
 import com.nya.app.data.Scene
 import java.util.UUID
 
@@ -45,6 +48,19 @@ data class DeviceEntity(
     val latestFirmware: String?
 )
 
+/** One row per account; [updatedAt] is the epoch ms of the last user edit, 0 if never edited. */
+@Entity
+data class ProfileEntity(
+    @PrimaryKey val uid: String,
+    val name: String,
+    val companion: String,
+    val skin: Int,
+    val gender: String,
+    val voice: Int,
+    val notifications: Boolean,
+    val updatedAt: Long
+)
+
 @Entity
 data class SeedMark(@PrimaryKey val uid: String)
 
@@ -56,3 +72,14 @@ fun MemoryEntity.toMemory() = Memory(
 fun ChatMessageEntity.toMessage() = ChatMessage(id, text, mine)
 
 fun DeviceEntity.toDeviceInfo() = DeviceInfo(name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware)
+
+fun ProfileEntity.toProfile(): Profile {
+    val d = Profile()
+    return Profile(
+        name, Companion.entries.firstOrNull { it.name == companion } ?: d.companion, skin,
+        Gender.entries.firstOrNull { it.name == gender } ?: d.gender, voice, notifications
+    )
+}
+
+fun Profile.toEntity(uid: String, updatedAt: Long) =
+    ProfileEntity(uid, name, companion.name, skin, gender.name, voice, notifications, updatedAt)

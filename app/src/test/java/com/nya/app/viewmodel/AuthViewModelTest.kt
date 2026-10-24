@@ -111,6 +111,30 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun signInKeepsTheAccountName() = runTest {
+        profile.update { it.copy(name = "Zed") }
+        vm.signIn("ada@nya.app", "password1") { done++ }
+        advanceUntilIdle()
+        assertEquals(1, done)
+        assertEquals("Zed", profile.profile.first().name)
+    }
+
+    @Test
+    fun signInNamesAnAccountWithoutOne() = runTest {
+        vm.signIn("ada@nya.app", "password1") { done++ }
+        advanceUntilIdle()
+        assertEquals("Ada", profile.profile.first().name)
+    }
+
+    @Test
+    fun signUpOverwritesTheName() = runTest {
+        profile.update { it.copy(name = "Zed") }
+        signUp(name = "Ada")
+        advanceUntilIdle()
+        assertEquals("Ada", profile.profile.first().name)
+    }
+
+    @Test
     fun blankSignInFieldsAreRejected() {
         vm.signIn("ada@nya.app", "") { done++ }
         assertRejected("Enter your email and password.")

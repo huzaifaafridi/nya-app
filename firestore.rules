@@ -79,6 +79,23 @@ service cloud.firestore {
           && (request.resource.data.latestFirmware == null
             || (request.resource.data.latestFirmware is string && request.resource.data.latestFirmware.size() <= 200));
       }
+
+      match /profile/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id == 'main'
+          && request.resource.data.keys().hasOnly(
+            ['name', 'companion', 'skin', 'gender', 'voice', 'notifications', 'updatedAt'])
+          && request.resource.data.keys().hasAll(
+            ['name', 'companion', 'skin', 'gender', 'voice', 'notifications', 'updatedAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 100 // keep equal to MaxNameLength in ProfileRepository.kt
+          && request.resource.data.companion is string
+          && request.resource.data.companion in ['Wanderer', 'Muse', 'Guide', 'Yogi', 'Creator']
+          && request.resource.data.skin is int
+          && request.resource.data.gender is string && request.resource.data.gender in ['Female', 'Male']
+          && request.resource.data.voice is int && request.resource.data.voice >= 0 && request.resource.data.voice <= 20
+          && request.resource.data.notifications is bool
+          && request.resource.data.updatedAt is int;
+      }
     }
   }
 }

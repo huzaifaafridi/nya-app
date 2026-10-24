@@ -25,6 +25,19 @@ data class DeviceDoc(
     val latestFirmware: String?
 )
 
+data class ProfileDoc(
+    val name: String,
+    val companion: String,
+    val skin: Int,
+    val gender: String,
+    val voice: Int,
+    val notifications: Boolean,
+    val updatedAt: Long
+)
+
+/** [doc] is null when the profile is missing; [fromServer] is false while it comes from the on-device cache. */
+data class ProfileSnapshot(val doc: ProfileDoc?, val fromServer: Boolean)
+
 /** [fromServer] is false while the items come from the on-device cache and may be out of date. */
 data class RemoteSnapshot<T>(val items: List<T>, val fromServer: Boolean)
 
@@ -39,10 +52,12 @@ interface CloudSync {
     fun memories(uid: String): Flow<RemoteSnapshot<MemoryDoc>>
     fun messages(uid: String): Flow<List<MessageDoc>>
     fun device(uid: String): Flow<DeviceDoc?>
+    fun profile(uid: String): Flow<ProfileSnapshot>
 
     // Writes are queued and retried by the backend, so they never wait for the network.
     fun putMemory(uid: String, doc: MemoryDoc)
     fun deleteMemory(uid: String, remoteId: String)
     fun putMessage(uid: String, doc: MessageDoc)
     fun putDevice(uid: String, doc: DeviceDoc)
+    fun putProfile(uid: String, doc: ProfileDoc)
 }

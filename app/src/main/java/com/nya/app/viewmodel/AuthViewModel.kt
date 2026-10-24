@@ -50,7 +50,7 @@ class AuthViewModel(private val auth: AuthRepository, private val profile: Profi
 
     private suspend fun finish(result: Result<AuthUser>, onDone: (AuthUser) -> Unit) {
         result.onSuccess { user ->
-            profile.update { it.copy(name = user.name) }
+            if (user.isNew) profile.update { it.copy(name = user.name) } else profile.suggestName(user.name)
             onDone(user)
         }.onFailure { error = it.authMessage() }
     }

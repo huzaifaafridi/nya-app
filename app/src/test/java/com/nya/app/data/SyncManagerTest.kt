@@ -8,6 +8,7 @@ import com.nya.app.data.local.DeviceDao
 import com.nya.app.data.local.DeviceEntity
 import com.nya.app.data.local.MemoryDao
 import com.nya.app.data.local.MemoryEntity
+import com.nya.app.data.local.ProfileEntity
 import com.nya.app.data.local.SeedDao
 import com.nya.app.data.local.SeedMark
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,9 +37,13 @@ private fun memory(remoteId: String, uid: String = Uid, createdAt: Long = 1L) = 
 
 private fun memoryDoc(remoteId: String) = MemoryDoc(remoteId, "T $remoteId", "P", "N", "Sea", null, null, 1L)
 
+private fun profileRow(updatedAt: Long) = ProfileEntity(Uid, "Ada", "Muse", 1, "Female", 2, true, updatedAt)
+
+private fun profileDoc(updatedAt: Long, name: String = "Remote") = ProfileDoc(name, "Guide", -5, "Male", 3, false, updatedAt)
+
 private val device = DeviceEntity(Uid, "NYA F1", "Wi-Fi", 0.5f, 1f, 16f, "1.0", null)
 
-private class FakeCloud : CloudSync {
+internal class FakeCloud : CloudSync {
     var touch: suspend () -> Boolean = { true }
     var create: suspend () -> Unit = {}
     val calls = mutableListOf<String>()
@@ -49,6 +54,8 @@ private class FakeCloud : CloudSync {
     val memoryDeletes = mutableListOf<Pair<String, String>>()
     val messagePuts = mutableListOf<MessageDoc>()
     val devicePuts = mutableListOf<DeviceDoc>()
+    val profileFlow = MutableSharedFlow<ProfileSnapshot>(replay = 1)
+    val profilePuts = mutableListOf<ProfileDoc>()
 
     override suspend fun touchUser(uid: String): Boolean {
         calls += "touch"
@@ -63,6 +70,8 @@ private class FakeCloud : CloudSync {
     override fun memories(uid: String): Flow<RemoteSnapshot<MemoryDoc>> = memoryFlow
     override fun messages(uid: String): Flow<List<MessageDoc>> = messageFlow
     override fun device(uid: String): Flow<DeviceDoc?> = deviceFlow
+    override fun profile(uid: String): Flow<ProfileSnapshot> = profileFlow
+    override fun putProfile(uid: String, doc: ProfileDoc) { profilePuts += doc }
     override fun putMemory(uid: String, doc: MemoryDoc) { calls += "putMemory"; memoryPuts += doc }
     override fun deleteMemory(uid: String, remoteId: String) { calls += "deleteMemory"; memoryDeletes += uid to remoteId }
     override fun putMessage(uid: String, doc: MessageDoc) { calls += "putMessage"; messagePuts += doc }
@@ -140,10 +149,16 @@ private class Rig(private val scope: TestScope) {
     val memories = FakeMemoryDao()
     val chat = FakeChatDao()
     val devices = FakeDeviceDao()
+    val profiles = FakeProfileDao()
 
     fun start() {
-        SyncManager(uid, cloud, LocalMediaStore(), memories, chat, devices, FakeSeedDao(memories, devices), scope.backgroundScope)
+        SyncManager(uid, cloud, LocalMediaStore(), memories, chat, devices, profiles, FakeSeedDao(memories, devices), scope.backgroundScope)
             .start()
+        scope.runCurrent()
+    }
+
+    suspend fun emit(snapshot: ProfileSnapshot) {
+        cloud.profileFlow.emit(snapshot)
         scope.runCurrent()
     }
 
@@ -164,6 +179,46 @@ class SyncManagerTest {
     }
 
     @Test
+    fun profileActionFollowsTheNewerWriter() {
+        val local = profileRow(10)
+        assertEquals(ProfileAction.Apply, profileAction(local, profileDoc(11), fromServer = false))
+        assertEquals(ProfileAction.Apply, profileAction(local, profileDoc(11), fromServer = true))
+        assertEquals(ProfileAction.Apply, profileAction(null, profileDoc(0), fromServer = false))
+        assertEquals(ProfileAction.Push, profileAction(local, profileDoc(9), fromServer = true))
+        assertEquals(ProfileAction.None, profileAction(local, profileDoc(9), fromServer = false))
+        assertEquals(ProfileAction.Push, profileAction(local, null, fromServer = true))
+        assertEquals(ProfileAction.None, profileAction(local, null, fromServer = false))
+        assertEquals(ProfileAction.None, profileAction(local, profileDoc(10), fromServer = true))
+        assertEquals(ProfileAction.None, profileAction(null, null, fromServer = true))
+    }
+
+    @Test
+    fun newerRemoteProfileIsAppliedWithoutPushing() = runTest {
+        val rig = Rig(this)
+        rig.profiles.upsert(profileRow(10))
+        rig.start()
+
+        rig.emit(ProfileSnapshot(profileDoc(20), fromServer = false))
+        assertEquals(profileDoc(20).toEntity(Uid), rig.profiles.rows.value.getValue(Uid))
+        rig.emit(ProfileSnapshot(profileDoc(20), fromServer = true))
+        assertTrue(rig.cloud.profilePuts.isEmpty())
+    }
+
+    @Test
+    fun newerLocalProfileIsPushedOnlyAfterAServerSnapshot() = runTest {
+        val rig = Rig(this)
+        rig.profiles.upsert(profileRow(10))
+        rig.start()
+
+        rig.emit(ProfileSnapshot(null, fromServer = false))
+        assertTrue(rig.cloud.profilePuts.isEmpty())
+        rig.emit(ProfileSnapshot(null, fromServer = true))
+        assertEquals(listOf(profileRow(10).toDoc()), rig.cloud.profilePuts)
+        rig.emit(ProfileSnapshot(profileRow(10).toDoc(), fromServer = true))
+        assertEquals(1, rig.cloud.profilePuts.size)
+    }
+
+    @Test
     fun mappingsRoundTripWithoutLocalMediaUri() {
         val entity = memory("m1").copy(clipSeconds = 8, mediaUri = "content://photo")
         val doc = entity.toDoc("cloud-ref")
@@ -181,6 +236,7 @@ class SyncManagerTest {
         val rig = Rig(this)
         rig.memories.insertAll(listOf(memory("mine")))
         rig.chat.insertAll(listOf(ChatMessageEntity(uid = Uid, text = "hi", mine = true, createdAt = 1L, remoteId = "c1")))
+        rig.profiles.upsert(profileRow(10))
         rig.cloud.touch = { false }
         rig.start()
 
@@ -190,6 +246,7 @@ class SyncManagerTest {
         assertEquals(local.map { it.remoteId }.toSet(), rig.cloud.memoryPuts.map { it.remoteId }.toSet())
         assertEquals(listOf("c1"), rig.cloud.messagePuts.map { it.remoteId })
         assertEquals(listOf("NYA F1"), rig.cloud.devicePuts.map { it.name })
+        assertEquals(listOf(profileRow(10).toDoc()), rig.cloud.profilePuts)
         assertEquals("create", rig.cloud.calls.last())
         assertEquals(listOf("touch"), rig.cloud.calls.take(1))
 

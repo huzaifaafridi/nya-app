@@ -6,10 +6,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,7 +25,6 @@ fun SettingsScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
-    var notifs by remember { mutableStateOf(true) }
     val seg = RoundedCornerShape(16.dp)
 
     Column(Modifier.fillMaxSize().nyaBg()) {
@@ -70,7 +65,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             XLabel("Preferences", Modifier.staggerIn(3))
             XCard(Modifier.staggerIn(4)) {
-                XToggle("Notifications", "Memory and device alerts", notifs) { notifs = it }
+                XToggle("Notifications", "Memory and device alerts", prefs.notifications) { app.setNotifications(it) }
                 XDivider()
                 XToggle("Quiet mode", "Pause voice replies", prefs.quiet) { app.setQuiet(it) }
             }

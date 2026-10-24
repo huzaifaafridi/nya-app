@@ -56,6 +56,18 @@ class FirestoreCloudSync(private val db: FirebaseFirestore = FirebaseFirestore.g
         awaitClose { registration.remove() }
     }
 
+    override fun profile(uid: String): Flow<ProfileSnapshot> = callbackFlow {
+        val registration = user(uid).collection("profile").document("main").addSnapshotListener { snap, e ->
+            if (e != null) {
+                Log.w(Tag, "profile listener failed", e)
+                close()
+            } else if (snap != null) {
+                trySend(ProfileSnapshot(snap.runCatching { toProfileDoc() }.getOrNull(), !snap.metadata.isFromCache))
+            }
+        }
+        awaitClose { registration.remove() }
+    }
+
     override fun putMemory(uid: String, doc: MemoryDoc) = write(
         user(uid).collection("memories").document(doc.remoteId).set(
             mapOf(
@@ -79,6 +91,15 @@ class FirestoreCloudSync(private val db: FirebaseFirestore = FirebaseFirestore.g
                 "name" to doc.name, "link" to doc.link, "battery" to doc.battery,
                 "storageUsedGb" to doc.storageUsedGb, "storageTotalGb" to doc.storageTotalGb,
                 "firmware" to doc.firmware, "latestFirmware" to doc.latestFirmware
+            )
+        )
+    )
+
+    override fun putProfile(uid: String, doc: ProfileDoc) = write(
+        user(uid).collection("profile").document("main").set(
+            mapOf(
+                "name" to doc.name, "companion" to doc.companion, "skin" to doc.skin, "gender" to doc.gender,
+                "voice" to doc.voice, "notifications" to doc.notifications, "updatedAt" to doc.updatedAt
             )
         )
     )
@@ -132,5 +153,18 @@ private fun DocumentSnapshot.toDeviceDoc(): DeviceDoc? {
         storageTotalGb = getDouble("storageTotalGb")?.toFloat() ?: return null,
         firmware = getString("firmware") ?: return null,
         latestFirmware = getString("latestFirmware")
+    )
+}
+
+private fun DocumentSnapshot.toProfileDoc(): ProfileDoc? {
+    if (!exists()) return null
+    return ProfileDoc(
+        name = getString("name") ?: return null,
+        companion = getString("companion") ?: return null,
+        skin = getLong("skin")?.toInt() ?: return null,
+        gender = getString("gender") ?: return null,
+        voice = getLong("voice")?.toInt() ?: return null,
+        notifications = getBoolean("notifications") ?: return null,
+        updatedAt = getLong("updatedAt") ?: return null
     )
 }

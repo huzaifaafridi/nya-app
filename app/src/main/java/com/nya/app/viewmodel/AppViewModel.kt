@@ -29,7 +29,7 @@ class AppViewModel(
     private val auth: AuthRepository
 ) : ViewModel() {
     val prefs: StateFlow<Prefs?> = combine(settings.settings, profile.profile) { s, p ->
-        Prefs(p.name, p.companion, p.skin, p.gender, p.voice, s.theme, s.quiet, s.mode, s.onboarded)
+        Prefs(p.name, p.companion, p.skin, p.gender, p.voice, p.notifications, s.theme, s.quiet, s.mode, s.onboarded)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private fun updateSettings(transform: (AppSettings) -> AppSettings) {
@@ -44,6 +44,7 @@ class AppViewModel(
     fun setSkin(argb: Int) = updateProfile { it.copy(skin = argb) }
     fun setGender(gender: Gender) = updateProfile { it.copy(gender = gender) }
     fun setVoice(voice: Int) = updateProfile { it.copy(voice = voice) }
+    fun setNotifications(on: Boolean) = updateProfile { it.copy(notifications = on) }
     fun setTheme(theme: Int) = updateSettings { it.copy(theme = theme) }
     fun setQuiet(quiet: Boolean) = updateSettings { it.copy(quiet = quiet) }
     fun setMode(mode: Int) = updateSettings { it.copy(mode = mode) }
