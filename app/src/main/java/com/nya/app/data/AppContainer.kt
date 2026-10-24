@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.nya.app.data.ble.BleClient
 import com.nya.app.data.ble.SimulatedBleClient
+import com.nya.app.data.local.Migration1To2
 import com.nya.app.data.local.NyaDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,14 +20,24 @@ class AppContainer(context: Context) {
     private val userStore: DataStore<Preferences> = appContext.userDataStore
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ble: BleClient = SimulatedBleClient(appScope)
-    private val db = Room.databaseBuilder(appContext, NyaDatabase::class.java, "nya.db").build()
+    private val db = Room.databaseBuilder(appContext, NyaDatabase::class.java, "nya.db")
+        .addMigrations(Migration1To2)
+        .build()
+
+    private val cloud: CloudSync = FirestoreCloudSync()
 
     val auth: AuthRepository = FirebaseAuthRepository()
     val settings: SettingsRepository = DataStoreSettingsRepository(userStore)
     val profile: ProfileRepository = DataStoreProfileRepository(userStore)
-    val memories: MemoryRepository = RoomMemoryRepository(db.memoryDao(), db.seedDao(), auth.uid)
+    val memories: MemoryRepository = RoomMemoryRepository(db.memoryDao(), cloud, auth.uid)
     val chat: ChatRepository = RoomChatRepository(
-        db.chatDao(), auth.uid, profile, settings, GeminiReplyEngine(), appScope
+        db.chatDao(), cloud, auth.uid, profile, settings, GeminiReplyEngine(), appScope
     )
-    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), db.seedDao(), auth.uid, ble, appScope)
+    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), cloud, auth.uid, ble, appScope)
+
+    init {
+        SyncManager(
+            auth.uid, cloud, LocalMediaStore(), db.memoryDao(), db.chatDao(), db.deviceDao(), db.seedDao(), appScope
+        ).start()
+    }
 }

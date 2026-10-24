@@ -58,7 +58,7 @@ class FakeReplyEngine : ReplyEngine {
     }
 }
 
-private const val Greeting = "Hey, I'm here. What's on your mind?"
+internal const val Greeting = "Hey, I'm here. What's on your mind?"
 private const val BusyMessage = "Nya is busy right now, try again in a moment."
 
 /** Runs a reply in [scope], so it is still saved when the screen is left mid-stream. */
@@ -140,6 +140,7 @@ abstract class StreamingChat(
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomChatRepository(
     private val dao: ChatDao,
+    private val cloud: CloudSync,
     private val uid: Flow<String?>,
     private val profile: ProfileRepository,
     private val settings: SettingsRepository,
@@ -152,19 +153,25 @@ class RoomChatRepository(
 
     override val history: Flow<List<ChatMessage>> = uid.flatMapLatest { id ->
         if (id == null) flowOf(emptyList()) else flow {
-            dao.insertIfEmpty(message(id, Greeting, mine = false))
+            val greeting = message(id, Greeting, mine = false).copy(remoteId = "greeting")
+            dao.insertIfEmpty(greeting)
             emitAll(dao.observe(id).map { list -> list.map { it.toMessage() } })
         }
     }
 
     override suspend fun saveMine(text: String): Saved? {
         val id = uid.first() ?: return null
-        dao.insert(message(id, text, mine = true))
+        save(message(id, text, mine = true))
         return Saved(id, dao.history(id).map { it.toMessage() })
     }
 
     override suspend fun saveNya(uid: String, text: String) {
-        if (this.uid.first() == uid) dao.insert(message(uid, text, mine = false))
+        if (this.uid.first() == uid) save(message(uid, text, mine = false))
+    }
+
+    private suspend fun save(message: ChatMessageEntity) {
+        dao.insert(message)
+        cloud.putMessage(message.uid, message.toDoc())
     }
 
     override suspend fun persona(): ChatPersona {

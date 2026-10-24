@@ -5,7 +5,6 @@ import com.nya.app.data.ble.DeviceStatus
 import com.nya.app.data.ble.LinkState
 import com.nya.app.data.local.DeviceDao
 import com.nya.app.data.local.DeviceEntity
-import com.nya.app.data.local.SeedDao
 import com.nya.app.data.local.toDeviceInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,12 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -37,17 +34,14 @@ interface DeviceRepository {
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomDeviceRepository(
     private val dao: DeviceDao,
-    private val seed: SeedDao,
+    private val cloud: CloudSync,
     private val uid: Flow<String?>,
     private val ble: BleClient,
     scope: CoroutineScope
 ) : DeviceRepository {
     override val device: Flow<DeviceInfo?> = uid.flatMapLatest { id ->
-        if (id == null) flowOf(null) else flow {
-            seed.seed(id)
-            emitAll(combine(dao.observe(id), ble.state, ble.status) { record, state, status ->
-                record?.toDeviceInfo()?.withLink(state, status)
-            })
+        if (id == null) flowOf(null) else combine(dao.observe(id), ble.state, ble.status) { record, state, status ->
+            record?.toDeviceInfo()?.withLink(state, status)
         }
     }
 
@@ -57,15 +51,27 @@ class RoomDeviceRepository(
         scope.launch {
             uid.flatMapLatest { id ->
                 if (id == null) emptyFlow() else ble.status.filterNotNull().map { id to it }
-            }.collect { (id, s) -> dao.updateReadings(id, s.battery, s.storageUsedGb, s.storageTotalGb, s.firmware) }
+            }.collect { (id, s) ->
+                val before = dao.get(id)
+                dao.updateReadings(id, s.battery, s.storageUsedGb, s.storageTotalGb, s.firmware)
+                if (before != null && before.firmware != s.firmware) {
+                    cloud.putDevice(
+                        id,
+                        before.copy(
+                            battery = s.battery, storageUsedGb = s.storageUsedGb,
+                            storageTotalGb = s.storageTotalGb, firmware = s.firmware
+                        ).toDoc()
+                    )
+                }
+            }
         }
         scope.launch {
             // new account or sign-out drops the link; a known headband reconnects quietly
             uid.distinctUntilChanged().collectLatest { id ->
                 ble.disconnect()
                 if (id == null) return@collectLatest
-                seed.seed(id)
-                if (dao.observe(id).first() != null) ble.connect()
+                dao.observe(id).filterNotNull().first()
+                ble.connect()
             }
         }
     }
@@ -73,6 +79,7 @@ class RoomDeviceRepository(
     override suspend fun connect(): Result<Unit> = ble.connect().onSuccess {
         val id = uid.first() ?: return@onSuccess
         ble.status.value?.let { dao.insertIfMissing(it.toEntity(id)) }
+        dao.get(id)?.let { cloud.putDevice(id, it.toDoc()) }
     }
 
     override suspend fun disconnect() = ble.disconnect()

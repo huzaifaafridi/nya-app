@@ -7,6 +7,9 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.nya.app.data.Greeting
 import com.nya.app.data.Scene
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -19,6 +22,21 @@ interface MemoryDao {
 
     @Query("DELETE FROM MemoryEntity WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM MemoryEntity WHERE uid = :uid")
+    suspend fun all(uid: String): List<MemoryEntity>
+
+    @Query("SELECT * FROM MemoryEntity WHERE id = :id")
+    suspend fun byId(id: Long): MemoryEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(items: List<MemoryEntity>)
+
+    @Query("SELECT remoteId FROM MemoryEntity WHERE uid = :uid")
+    suspend fun remoteIds(uid: String): List<String>
+
+    @Query("DELETE FROM MemoryEntity WHERE uid = :uid AND remoteId IN (:ids)")
+    suspend fun deleteByRemoteIds(uid: String, ids: List<String>)
 }
 
 @Dao
@@ -35,6 +53,9 @@ abstract class ChatDao {
     @Insert
     abstract suspend fun insert(message: ChatMessageEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertAll(items: List<ChatMessageEntity>)
+
     @Transaction
     open suspend fun insertIfEmpty(message: ChatMessageEntity) {
         if (count(message.uid) == 0) insert(message)
@@ -48,6 +69,12 @@ interface DeviceDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfMissing(device: DeviceEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(device: DeviceEntity)
+
+    @Query("SELECT * FROM DeviceEntity WHERE uid = :uid")
+    suspend fun get(uid: String): DeviceEntity?
 
     @Query("UPDATE DeviceEntity SET battery = :battery, storageUsedGb = :used, storageTotalGb = :total, firmware = :firmware WHERE uid = :uid")
     suspend fun updateReadings(uid: String, battery: Float, used: Float, total: Float, firmware: String)
@@ -82,7 +109,7 @@ abstract class SeedDao {
         fun memory(title: String, place: String, note: String, scene: Scene, createdAt: Long, clip: Int? = null) =
             MemoryEntity(uid = uid, title = title, place = place, note = note, scene = scene.name,
                 clipSeconds = clip, mediaUri = null, createdAt = createdAt)
-        return listOf(
+        val demos = listOf(
             memory("Sunset at the pier", "Karachi",
                 "Golden hour by the water. You said it felt like the day finally slowed down.", Scene.Sea, at(0, 18, 42), 8),
             memory("Beach day", "Sea View",
@@ -96,12 +123,30 @@ abstract class SeedDao {
             memory("Family dinner", "Home",
                 "Everyone together. Biryani, lots of laughing.", Scene.City, at(5, 20, 30))
         )
+        return demos.mapIndexed { i, m -> m.copy(remoteId = "demo-$i") }
+    }
+}
+
+val Migration1To2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for (table in listOf("MemoryEntity", "ChatMessageEntity")) {
+            db.execSQL("ALTER TABLE `$table` ADD COLUMN `remoteId` TEXT NOT NULL DEFAULT ''")
+            db.execSQL("UPDATE `$table` SET `remoteId` = lower(hex(randomblob(16)))")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_${table}_uid_remoteId` ON `$table` (`uid`, `remoteId`)")
+        }
+        db.execSQL(
+            "UPDATE `ChatMessageEntity` SET `remoteId` = 'greeting' WHERE `id` IN (" +
+                "SELECT (SELECT m.`id` FROM `ChatMessageEntity` m WHERE m.`uid` = u.`uid` AND m.`mine` = 0 AND m.`text` = ? " +
+                "ORDER BY m.`createdAt`, m.`id` LIMIT 1) FROM (SELECT DISTINCT `uid` FROM `ChatMessageEntity`) u) " +
+                "AND NOT EXISTS (SELECT 1 FROM `ChatMessageEntity` g WHERE g.`uid` = `ChatMessageEntity`.`uid` AND g.`remoteId` = 'greeting')",
+            arrayOf(Greeting)
+        )
     }
 }
 
 @Database(
     entities = [MemoryEntity::class, ChatMessageEntity::class, DeviceEntity::class, SeedMark::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class NyaDatabase : RoomDatabase() {

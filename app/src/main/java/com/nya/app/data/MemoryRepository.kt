@@ -1,14 +1,11 @@
 package com.nya.app.data
 
 import com.nya.app.data.local.MemoryDao
-import com.nya.app.data.local.SeedDao
 import com.nya.app.data.local.toMemory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -21,17 +18,19 @@ interface MemoryRepository {
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomMemoryRepository(
     private val dao: MemoryDao,
-    private val seed: SeedDao,
+    private val cloud: CloudSync,
     uid: Flow<String?>
 ) : MemoryRepository {
     override val memories: Flow<List<Memory>> = uid.flatMapLatest { id ->
-        if (id == null) flowOf(emptyList()) else flow {
-            seed.seed(id)
-            emitAll(dao.observe(id).map { list -> list.map { it.toMemory() } })
-        }
+        if (id == null) flowOf(emptyList()) else dao.observe(id).map { list -> list.map { it.toMemory() } }
     }
 
-    override suspend fun delete(id: Long) = dao.delete(id)
+    override suspend fun delete(id: Long) {
+        val memory = dao.byId(id) ?: return
+        // first, so a snapshot arriving in between cannot bring the row back
+        cloud.deleteMemory(memory.uid, memory.remoteId)
+        dao.delete(id)
+    }
 }
 
 class FakeMemoryRepository : MemoryRepository {

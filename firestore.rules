@@ -1,0 +1,84 @@
+// Firestore security rules for Nya.
+//
+// Deploy: Firebase console -> Firestore Database -> Rules -> paste this file -> Publish.
+// Everything not matched below is denied. Rules for appConfig arrive in Phase 10.
+//
+// These must stay in step with the writes in FirestoreCloudSync.kt.
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validPlatform(value) {
+      return value is string && value in ['android', 'ios'];
+    }
+
+    // users/{uid}: created once with server timestamps; afterwards only lastActiveAt and platform can change.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['createdAt', 'lastActiveAt', 'plan', 'platform'])
+        && request.resource.data.keys().hasAll(['createdAt', 'lastActiveAt', 'plan', 'platform'])
+        && request.resource.data.plan == 'free'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.lastActiveAt == request.time
+        && validPlatform(request.resource.data.platform);
+
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt', 'platform'])
+        && request.resource.data.lastActiveAt == request.time
+        && validPlatform(request.resource.data.platform);
+
+      allow delete: if false;
+
+      match /memories/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(
+            ['title', 'place', 'note', 'scene', 'clipSeconds', 'mediaRef', 'createdAt'])
+          && request.resource.data.keys().hasAll(
+            ['title', 'place', 'note', 'scene', 'clipSeconds', 'mediaRef', 'createdAt'])
+          && request.resource.data.title is string && request.resource.data.title.size() <= 200
+          && request.resource.data.place is string && request.resource.data.place.size() <= 200
+          && request.resource.data.note is string && request.resource.data.note.size() <= 10000
+          && request.resource.data.scene is string && request.resource.data.scene.size() <= 50
+          && (request.resource.data.clipSeconds == null || request.resource.data.clipSeconds is int)
+          && (request.resource.data.mediaRef == null
+            || (request.resource.data.mediaRef is string && request.resource.data.mediaRef.size() <= 2000))
+          && request.resource.data.createdAt is int;
+      }
+
+      match /messages/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['text', 'mine', 'createdAt'])
+          && request.resource.data.keys().hasAll(['text', 'mine', 'createdAt'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 10000
+          && request.resource.data.mine is bool
+          && request.resource.data.createdAt is int;
+      }
+
+      match /devices/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && id == 'main'
+          && request.resource.data.keys().hasOnly(
+            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware'])
+          && request.resource.data.keys().hasAll(
+            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 200
+          && request.resource.data.link is string && request.resource.data.link.size() <= 200
+          && request.resource.data.battery is number
+          && request.resource.data.storageUsedGb is number
+          && request.resource.data.storageTotalGb is number
+          && request.resource.data.firmware is string && request.resource.data.firmware.size() <= 200
+          && (request.resource.data.latestFirmware == null
+            || (request.resource.data.latestFirmware is string && request.resource.data.latestFirmware.size() <= 200));
+      }
+    }
+  }
+}
