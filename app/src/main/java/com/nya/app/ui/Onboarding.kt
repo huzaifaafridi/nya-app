@@ -87,16 +87,8 @@ fun ResetScreen(onBack: () -> Unit) {
 
 @Composable
 fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
-    val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
-    val items = listOf(
-        "Wanderer" to "Curious about places and discoveries",
-        "Muse" to "Style, taste and inspiration",
-        "Guide" to "Calm, clear answers",
-        "Yogi" to "Mindful and steady",
-        "Creator" to "Ideas and making things"
-    )
     var sel by remember { mutableIntStateOf(prefs.companion.ordinal) }
     Page {
         StepBack(onBack)
@@ -105,28 +97,45 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Para("Each one thinks and talks a little differently. You can change this later in Settings.")
         Spacer(Modifier.height(24.dp))
-        items.forEachIndexed { i, (name, desc) ->
-            val shape = RoundedCornerShape(20.dp)
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 12.dp).pressScale(role = Role.RadioButton, selected = i == sel) { sel = i }.clip(shape).background(c.sf)
-                    .border(if (i == sel) 2.dp else 1.dp, if (i == sel) c.ac else c.ln, shape)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    Modifier.size(48.dp).clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(c.b1, c.b2))),
-                    contentAlignment = Alignment.Center
-                ) { Avatar2D(Modifier.fillMaxSize(), Companion.entries[i], Color(prefs.skin), prefs.gender) }
-                Spacer(Modifier.width(14.dp))
-                Column {
-                    Text(name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                    Text(desc, color = c.sb, fontSize = 13.sp)
-                }
-            }
-        }
+        CompanionList(Companion.entries[sel]) { sel = it.ordinal }
         Spacer(Modifier.height(12.dp))
         NyaButton("Continue", { app.setCompanion(Companion.entries[sel]); onContinue() })
+    }
+}
+
+private val CompanionBlurbs = listOf(
+    "Curious about places and discoveries",
+    "Style, taste and inspiration",
+    "Calm, clear answers",
+    "Mindful and steady",
+    "Ideas and making things"
+)
+
+/** The five companion cards as a radio group; the avatar uses the profile's skin and gender. */
+@Composable
+fun CompanionList(selected: Companion, onSelect: (Companion) -> Unit) {
+    val c = LocalNya.current
+    val prefs = LocalPrefs.current
+    Companion.entries.forEach { companion ->
+        val on = companion == selected
+        val shape = RoundedCornerShape(20.dp)
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 12.dp).pressScale(role = Role.RadioButton, selected = on) { onSelect(companion) }.clip(shape).background(c.sf)
+                .border(if (on) 2.dp else 1.dp, if (on) c.ac else c.ln, shape)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(48.dp).clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(c.b1, c.b2))),
+                contentAlignment = Alignment.Center
+            ) { Avatar2D(Modifier.fillMaxSize(), companion, Color(prefs.skin), prefs.gender) }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(companion.name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(CompanionBlurbs[companion.ordinal], color = c.sb, fontSize = 13.sp)
+            }
+        }
     }
 }
 
@@ -173,7 +182,7 @@ fun AvatarScreen(onContinue: () -> Unit, onBack: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(20.dp))
-            VoicePicker()
+            VoicePicker(prefs, app::setVoice)
         }
         NyaButton(
             "Continue", { app.setSkin(Color(Skins[skin]).toArgb()); onContinue() },
@@ -215,11 +224,10 @@ private fun GenderPicker() {
     }
 }
 
+/** Voice chips for [prefs].gender with a preview; [prefs] holds the values being edited, [onPick] gets the chosen index. */
 @Composable
-private fun VoicePicker() {
+fun VoicePicker(prefs: Prefs, onPick: (Int) -> Unit) {
     val c = LocalNya.current
-    val prefs = LocalPrefs.current
-    val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text("Voice style", color = c.sb, fontSize = 12.sp, modifier = Modifier.weight(1f))
         if (VoiceEngine.available) IconBtn(
@@ -236,7 +244,7 @@ private fun VoicePicker() {
     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         val chosen = VoiceEngine.chosen(prefs.gender, prefs.voice)
         VoiceEngine.options(prefs.gender).forEachIndexed { i, v ->
-            NyaChip(v.name, v == chosen, { app.setVoice(i); previewVoice(prefs.copy(voice = i)) }, Modifier.weight(1f), hPad = 6.dp)
+            NyaChip(v.name, v == chosen, { onPick(i); previewVoice(prefs.copy(voice = i)) }, Modifier.weight(1f), hPad = 6.dp)
         }
     }
 }

@@ -67,17 +67,25 @@ service cloud.firestore {
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && id == 'main'
           && request.resource.data.keys().hasOnly(
-            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware'])
+            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware',
+             'autoSync', 'captureQuality', 'ledIndicator', 'lost', 'lostAt'])
           && request.resource.data.keys().hasAll(
-            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware'])
-          && request.resource.data.name is string && request.resource.data.name.size() <= 200
+            ['name', 'link', 'battery', 'storageUsedGb', 'storageTotalGb', 'firmware', 'latestFirmware',
+             'autoSync', 'captureQuality', 'ledIndicator', 'lost', 'lostAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 30 // keep equal to MaxDeviceNameLength in Models.kt
           && request.resource.data.link is string && request.resource.data.link.size() <= 200
           && request.resource.data.battery is number
           && request.resource.data.storageUsedGb is number
           && request.resource.data.storageTotalGb is number
           && request.resource.data.firmware is string && request.resource.data.firmware.size() <= 200
           && (request.resource.data.latestFirmware == null
-            || (request.resource.data.latestFirmware is string && request.resource.data.latestFirmware.size() <= 200));
+            || (request.resource.data.latestFirmware is string && request.resource.data.latestFirmware.size() <= 200))
+          && request.resource.data.autoSync is bool
+          && request.resource.data.captureQuality is int
+          && request.resource.data.captureQuality >= 0 && request.resource.data.captureQuality <= 2
+          && request.resource.data.ledIndicator is bool
+          && request.resource.data.lost is bool
+          && (request.resource.data.lostAt == null || request.resource.data.lostAt is int);
       }
 
       match /profile/{id} {

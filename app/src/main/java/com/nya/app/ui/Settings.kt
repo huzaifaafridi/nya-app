@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,8 +33,11 @@ fun SettingsScreen(onBack: () -> Unit) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)
         ) {
-            XCard(Modifier.staggerIn(0)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            XCard(Modifier.staggerIn(0), onClick = { SubNav.open("EditProfile") }) {
+                Row(
+                    Modifier.clearAndSetSemantics { contentDescription = "Edit profile, ${prefs.name}" },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         Modifier.size(52.dp).clip(CircleShape)
                             .background(Brush.linearGradient(listOf(c.b1, c.b2))),
@@ -72,6 +76,8 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             XLabel("Account", Modifier.staggerIn(5))
             XCard(Modifier.staggerIn(6)) {
+                XRow("Edit profile") { SubNav.open("EditProfile") }
+                XDivider()
                 XRow("Subscription", "Free") { SubNav.open("Subscription") }
                 XDivider()
                 XRow("Help & support") { SubNav.open("Help") }

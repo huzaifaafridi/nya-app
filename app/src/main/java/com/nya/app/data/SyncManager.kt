@@ -145,10 +145,16 @@ internal fun MessageDoc.toEntity(uid: String) =
     ChatMessageEntity(uid = uid, text = text, mine = mine, createdAt = createdAt, remoteId = remoteId)
 
 internal fun DeviceEntity.toDoc() =
-    DeviceDoc(name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware)
+    DeviceDoc(
+        name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware,
+        autoSync, captureQuality, ledIndicator, lost, lostAt
+    )
 
 internal fun DeviceDoc.toEntity(uid: String) =
-    DeviceEntity(uid, name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware)
+    DeviceEntity(
+        uid, name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware,
+        autoSync, captureQuality, ledIndicator, lost, lostAt
+    )
 
 internal fun ProfileEntity.toDoc() = ProfileDoc(name, companion, skin, gender, voice, notifications, updatedAt)
 

@@ -137,26 +137,32 @@ private fun Memory.badge() = clipSeconds?.let { "Clip · ${it / 60}:%02d".format
 
 private fun Memory.description() = "$title, ${if (clipSeconds != null) "clip" else "photo"}"
 
-// a thumb for one grid slot; slots without a memory stay empty
+// a thumb for one grid slot
 @Composable
-private fun Slot(m: Memory?, modifier: Modifier, onOpen: (Long) -> Unit, index: Int) {
-    if (m != null) NyaThumb(m.scene, modifier, m.badge(), m.clipSeconds != null, { onOpen(m.id) }, index, m.description())
+private fun Slot(m: Memory, modifier: Modifier, onOpen: (Long) -> Unit, index: Int) {
+    NyaThumb(m.scene, modifier, m.badge(), m.clipSeconds != null, { onOpen(m.id) }, index, m.description())
 }
 
-/** Memories: the masonry grid from the design */
+/** Memories: the masonry grid from the design for five items; fewer are laid out in plain rows of two */
 @Composable
 fun MemoriesGrid(items: List<Memory>, onOpen: (Long) -> Unit, start: Int = 0) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Slot(items.getOrNull(0), Modifier.weight(1f).height(190.dp), onOpen, start)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Slot(items.getOrNull(1), Modifier.fillMaxWidth().height(90.dp), onOpen, start + 1)
-                Slot(items.getOrNull(2), Modifier.fillMaxWidth().height(90.dp), onOpen, start + 2)
+        if (items.size < 5) items.withIndex().chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { (i, m) -> Slot(m, Modifier.weight(1f).height(130.dp), onOpen, start + i) }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Slot(items.getOrNull(3), Modifier.weight(1f).height(130.dp), onOpen, start + 3)
-            Slot(items.getOrNull(4), Modifier.weight(1f).height(130.dp), onOpen, start + 4)
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Slot(items[0], Modifier.weight(1f).height(190.dp), onOpen, start)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Slot(items[1], Modifier.fillMaxWidth().height(90.dp), onOpen, start + 1)
+                    Slot(items[2], Modifier.fillMaxWidth().height(90.dp), onOpen, start + 2)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Slot(items[3], Modifier.weight(1f).height(130.dp), onOpen, start + 3)
+                Slot(items[4], Modifier.weight(1f).height(130.dp), onOpen, start + 4)
+            }
         }
     }
 }

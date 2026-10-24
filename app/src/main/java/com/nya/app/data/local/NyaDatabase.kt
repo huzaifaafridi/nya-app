@@ -78,6 +78,15 @@ interface DeviceDao {
 
     @Query("UPDATE DeviceEntity SET battery = :battery, storageUsedGb = :used, storageTotalGb = :total, firmware = :firmware WHERE uid = :uid")
     suspend fun updateReadings(uid: String, battery: Float, used: Float, total: Float, firmware: String)
+
+    @Query("UPDATE DeviceEntity SET lost = :lost, lostAt = :lostAt WHERE uid = :uid")
+    suspend fun setLost(uid: String, lost: Boolean, lostAt: Long?)
+
+    @Query("UPDATE DeviceEntity SET name = :name, autoSync = :autoSync, captureQuality = :captureQuality, ledIndicator = :ledIndicator WHERE uid = :uid")
+    suspend fun updateSettings(uid: String, name: String, autoSync: Boolean, captureQuality: Int, ledIndicator: Boolean)
+
+    @Query("UPDATE DeviceEntity SET latestFirmware = :latestFirmware WHERE uid = :uid")
+    suspend fun setLatestFirmware(uid: String, latestFirmware: String?)
 }
 
 @Dao
@@ -172,9 +181,19 @@ val Migration2To3 = object : Migration(2, 3) {
     }
 }
 
+val Migration3To4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `DeviceEntity` ADD COLUMN `autoSync` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `DeviceEntity` ADD COLUMN `captureQuality` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `DeviceEntity` ADD COLUMN `ledIndicator` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL("ALTER TABLE `DeviceEntity` ADD COLUMN `lost` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `DeviceEntity` ADD COLUMN `lostAt` INTEGER")
+    }
+}
+
 @Database(
     entities = [MemoryEntity::class, ChatMessageEntity::class, DeviceEntity::class, ProfileEntity::class, SeedMark::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class NyaDatabase : RoomDatabase() {

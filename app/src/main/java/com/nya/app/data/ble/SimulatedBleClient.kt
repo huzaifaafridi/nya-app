@@ -1,5 +1,6 @@
 package com.nya.app.data.ble
 
+import com.nya.app.data.HeadbandSettings
 import com.nya.app.data.TransferItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -7,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -19,6 +21,10 @@ private const val CONNECT_MS = 1500L
 private const val DRAIN_MS = 60_000L
 private const val RING_MS = 8_000L
 private const val MIN_BATTERY = 0.05f
+private const val SETTINGS_MS = 400L
+private const val DOWNLOAD_MS = 6_000L
+private const val INSTALL_MS = 4_000L
+private const val FIRMWARE_STEPS = 40
 
 /**
  * Fake headband: every 3rd connection attempt fails so the pairing error path is reachable.
@@ -33,6 +39,8 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
     private var attempts = 0
     private var generation = 0
     private var battery = 0.82f
+    private var name = "${NyaBleUuids.NAME_PREFIX} F1"
+    private var firmware = "1.1.4"
     private var drainJob: Job? = null
     private var ringJob: Job? = null
 
@@ -61,7 +69,7 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
                     Result.failure(IllegalStateException("Headband not found"))
                 }
                 else -> {
-                    _status.value = DeviceStatus("${NyaBleUuids.NAME_PREFIX} F1", battery, 4.1f, 16f, "1.1.4")
+                    _status.value = DeviceStatus(name, battery, 4.1f, 16f, firmware)
                     _state.value = LinkState.Connected
                     drainJob = scope.launch {
                         while (true) {
@@ -97,6 +105,43 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
             synchronized(lock) { if (ringJob === self) _ringing.value = false }
         } else null
         Result.success(Unit)
+    }
+
+    override suspend fun applySettings(settings: HeadbandSettings): Result<Unit> {
+        val gen = synchronized(lock) {
+            if (_state.value != LinkState.Connected) return Result.failure(IllegalStateException("Not connected"))
+            generation
+        }
+        delay(SETTINGS_MS)
+        return synchronized(lock) {
+            if (generation != gen) return@synchronized Result.failure(IllegalStateException("Disconnected"))
+            name = settings.name
+            _status.update { s -> s?.copy(name = name) }
+            Result.success(Unit)
+        }
+    }
+
+    override fun updateFirmware(version: String): Flow<FirmwareStep> = flow {
+        val gen = synchronized(lock) {
+            check(_state.value == LinkState.Connected) { "Not connected" }
+            generation
+        }
+        step(gen, DOWNLOAD_MS) { FirmwareStep.Downloading(it) }
+        step(gen, INSTALL_MS) { FirmwareStep.Installing(it) }
+        synchronized(lock) {
+            check(generation == gen) { "Disconnected" }
+            firmware = version
+            _status.update { s -> s?.copy(firmware = version) }
+        }
+        emit(FirmwareStep.Done)
+    }
+
+    private suspend fun FlowCollector<FirmwareStep>.step(gen: Int, totalMs: Long, make: (Float) -> FirmwareStep) {
+        for (i in 1..FIRMWARE_STEPS) {
+            delay(totalMs / FIRMWARE_STEPS)
+            synchronized(lock) { check(generation == gen) { "Disconnected" } }
+            emit(make(i / FIRMWARE_STEPS.toFloat()))
+        }
     }
 
     override fun transfer(): Flow<List<TransferItem>> = flow {

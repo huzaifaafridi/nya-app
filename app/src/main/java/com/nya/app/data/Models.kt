@@ -44,7 +44,27 @@ data class DeviceInfo(
     val storageTotalGb: Float,
     val firmware: String,
     val latestFirmware: String?,
-    val state: LinkState = LinkState.Disconnected
+    val state: LinkState = LinkState.Disconnected,
+    val autoSync: Boolean = true,
+    val captureQuality: Int = DefaultCaptureQuality,
+    val ledIndicator: Boolean = true,
+    val lost: Boolean = false,
+    val lostAt: Long? = null // epoch ms when marked lost
+) {
+    val settings get() = HeadbandSettings(name, autoSync, captureQuality, ledIndicator)
+}
+
+/** Must match the device name size limit in firestore.rules. */
+const val MaxDeviceNameLength = 30
+
+const val DefaultCaptureQuality = 1
+
+/** [captureQuality]: 0 Standard, 1 High, 2 Max. */
+data class HeadbandSettings(
+    val name: String,
+    val autoSync: Boolean = true,
+    val captureQuality: Int = DefaultCaptureQuality,
+    val ledIndicator: Boolean = true
 )
 
 data class TransferItem(val title: String, val sizeMb: Int, val progress: Float)

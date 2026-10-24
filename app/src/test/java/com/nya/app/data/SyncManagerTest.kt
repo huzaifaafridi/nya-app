@@ -118,7 +118,7 @@ private class FakeChatDao : ChatDao() {
     }
 }
 
-private class FakeDeviceDao : DeviceDao {
+internal class FakeDeviceDao : DeviceDao {
     val rows = MutableStateFlow(emptyMap<String, DeviceEntity>())
 
     override fun observe(uid: String) = rows.map { it[uid] }
@@ -129,6 +129,13 @@ private class FakeDeviceDao : DeviceDao {
         rows.update { map ->
             map[uid]?.let { map + (uid to it.copy(battery = battery, storageUsedGb = used, storageTotalGb = total, firmware = firmware)) } ?: map
         }
+    override suspend fun setLost(uid: String, lost: Boolean, lostAt: Long?) = change(uid) { it.copy(lost = lost, lostAt = lostAt) }
+    override suspend fun updateSettings(uid: String, name: String, autoSync: Boolean, captureQuality: Int, ledIndicator: Boolean) =
+        change(uid) { it.copy(name = name, autoSync = autoSync, captureQuality = captureQuality, ledIndicator = ledIndicator) }
+    override suspend fun setLatestFirmware(uid: String, latestFirmware: String?) = change(uid) { it.copy(latestFirmware = latestFirmware) }
+
+    private fun change(uid: String, edit: (DeviceEntity) -> DeviceEntity) =
+        rows.update { map -> map[uid]?.let { map + (uid to edit(it)) } ?: map }
 }
 
 /** Runs the real demo seeding on top of the fake DAOs. */

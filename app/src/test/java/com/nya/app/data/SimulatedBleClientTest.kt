@@ -2,11 +2,15 @@
 
 package com.nya.app.data
 
+import com.nya.app.data.ble.FirmwareStep
 import com.nya.app.data.ble.LinkState
 import com.nya.app.data.ble.NyaBleUuids
 import com.nya.app.data.ble.SimulatedBleClient
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -14,6 +18,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -138,5 +143,92 @@ class SimulatedBleClientTest {
         assertTrue(ble.ringing.value)
         advanceBy(4000)
         assertFalse(ble.ringing.value)
+    }
+
+    @Test
+    fun applySettingsFailsWhenDisconnected() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        assertTrue(ble.applySettings(HeadbandSettings("Mine")).isFailure)
+    }
+
+    @Test
+    fun applySettingsRenamesTheStatusAndKeepsTheNameAcrossReconnect() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        assertTrue(ble.applySettings(HeadbandSettings("Mine")).isSuccess)
+        assertEquals("Mine", ble.status.value!!.name)
+        ble.disconnect()
+        ble.connect()
+        assertEquals("Mine", ble.status.value!!.name)
+    }
+
+    @Test
+    fun applySettingsFailsWhenTheLinkDropsMeanwhile() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        val result = async { ble.applySettings(HeadbandSettings("Mine")) }
+        runCurrent()
+        ble.disconnect()
+        advanceUntilIdle()
+        assertTrue(result.await().isFailure)
+    }
+
+    @Test
+    fun firmwareUpdateDownloadsThenInstallsThenChangesFirmware() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        val steps = ble.updateFirmware("1.2.0").toList()
+        assertEquals(81, steps.size)
+        assertEquals(FirmwareStep.Downloading(1f / 40), steps.first())
+        assertEquals(FirmwareStep.Downloading(1f), steps[39])
+        assertEquals(FirmwareStep.Installing(1f / 40), steps[40])
+        assertEquals(FirmwareStep.Installing(1f), steps[79])
+        assertEquals(FirmwareStep.Done, steps.last())
+        assertEquals("1.2.0", ble.status.value!!.firmware)
+        assertEquals(10_000L, testScheduler.currentTime - 1500)
+    }
+
+    @Test
+    fun firmwareStaysUpdatedAcrossReconnect() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        ble.updateFirmware("1.2.0").toList()
+        ble.disconnect()
+        ble.connect()
+        assertEquals("1.2.0", ble.status.value!!.firmware)
+    }
+
+    @Test
+    fun firmwareUpdateFailsWhenDisconnected() = runTest {
+        var error: Throwable? = null
+        SimulatedBleClient(backgroundScope).updateFirmware("1.2.0").catch { error = it }.toList()
+        assertNotNull(error)
+    }
+
+    @Test
+    fun cancellingTheFirmwareUpdateLeavesFirmwareUnchanged() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        val job = launch { ble.updateFirmware("1.2.0").collect {} }
+        advanceBy(7000) // into the install phase
+        job.cancel()
+        advanceUntilIdle()
+        assertEquals("1.1.4", ble.status.value!!.firmware)
+    }
+
+    @Test
+    fun linkDroppingMidUpdateFailsIt() = runTest {
+        val ble = SimulatedBleClient(backgroundScope)
+        ble.connect()
+        var error: Throwable? = null
+        val steps = mutableListOf<FirmwareStep>()
+        launch { ble.updateFirmware("1.2.0").catch { error = it }.collect { steps += it } }
+        advanceBy(3000)
+        ble.disconnect()
+        advanceUntilIdle()
+        assertNotNull(error)
+        assertTrue(steps.isNotEmpty() && steps.none { it == FirmwareStep.Done })
+        ble.connect()
+        assertEquals("1.1.4", ble.status.value!!.firmware)
     }
 }

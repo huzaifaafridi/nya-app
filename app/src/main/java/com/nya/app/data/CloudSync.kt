@@ -22,7 +22,12 @@ data class DeviceDoc(
     val storageUsedGb: Float,
     val storageTotalGb: Float,
     val firmware: String,
-    val latestFirmware: String?
+    val latestFirmware: String?,
+    val autoSync: Boolean = true,
+    val captureQuality: Int = DefaultCaptureQuality,
+    val ledIndicator: Boolean = true,
+    val lost: Boolean = false,
+    val lostAt: Long? = null
 )
 
 data class ProfileDoc(

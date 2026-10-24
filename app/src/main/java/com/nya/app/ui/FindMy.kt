@@ -8,10 +8,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,6 +38,7 @@ fun FindMyScreen(onBack: () -> Unit) {
     val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
     val device = vm.device.collectAsState().value.valueOrNull()
     val ringing by vm.ringing.collectAsState()
+    var confirmLost by remember { mutableStateOf(false) }
     val t = rememberInfiniteTransition(label = "radar")
     val p by t.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -67,12 +73,29 @@ fun FindMyScreen(onBack: () -> Unit) {
                 },
                 color = c.sb, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)
             )
+            if (device?.lost == true) {
+                Text(
+                    device.lostAt?.let { "Marked as lost · since ${memoryTime(it)}" } ?: "Marked as lost",
+                    color = NyaDanger, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
         Column(Modifier.padding(horizontal = 20.dp, vertical = 30.dp)) {
             XBtn(if (ringing) "Stop sound" else "Play sound", { vm.ring(!ringing) })
             Spacer(Modifier.height(12.dp))
-            XGhost("Mark as lost", { })
+            if (device?.lost == true) XGhost("Mark as found", { vm.setLost(false) })
+            else XGhost("Mark as lost", { confirmLost = true })
         }
     }
+    if (confirmLost) AlertDialog(
+        onDismissRequest = { confirmLost = false },
+        containerColor = c.sf, titleContentColor = c.tx, textContentColor = c.sb,
+        title = { Text("Mark as lost?") },
+        text = { Text("Your headband will be flagged as lost until you mark it as found.") },
+        confirmButton = {
+            TextButton({ confirmLost = false; vm.setLost(true) }) { Text("Mark as lost", color = NyaDanger) }
+        },
+        dismissButton = { TextButton({ confirmLost = false }) { Text("Cancel", color = c.ac) } }
+    )
 }
-

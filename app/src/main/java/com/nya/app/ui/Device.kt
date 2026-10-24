@@ -50,6 +50,19 @@ fun DeviceScreen() {
                 EmptyState("No headband paired", "Pair your Nya headband to see battery, storage and updates.", Modifier.padding(vertical = 40.dp))
                 return@LoadableContent
             }
+            if (d.lost) {
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    Modifier.fillMaxWidth().pressScale { SubNav.open("FindMy") }.clip(card).background(c.sf)
+                        .border(1.dp, NyaDanger, card).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    NyaIcon(NyaIcons.Pin, tint = NyaDanger)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Marked as lost", color = c.tx, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("Open Find My", color = c.ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
             Spacer(Modifier.height(20.dp))
             Row(Modifier.staggerIn(1), verticalAlignment = Alignment.CenterVertically) {
                 NyaOrb(84.dp) { NyaIcon(NyaIcons.Device, tint = c.ac, iconSize = 44.dp, strokeW = 1.2f) }
@@ -91,7 +104,9 @@ fun DeviceScreen() {
                         Text("Firmware $it · you have ${d.firmware}", color = c.sb, fontSize = 13.sp)
                     }
                     Text("Update", color = c.on, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                        modifier = Modifier.pressScale { SubNav.open("Firmware") }
+                            .sizeIn(minHeight = 48.dp).wrapContentHeight()
+                            .clip(RoundedCornerShape(16.dp))
                             .background(Brush.verticalGradient(listOf(c.b1, c.b2)))
                             .padding(horizontal = 14.dp, vertical = 8.dp))
                 }
@@ -101,7 +116,7 @@ fun DeviceScreen() {
             Column(Modifier.fillMaxWidth().staggerIn(4).clip(card).background(c.sf).border(1.dp, c.ln, card)) {
                 DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
-                DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { }
+                DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { SubNav.open("HeadbandSettings") }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
                 DevRow(NyaIcons.Refresh, "Reconnect") { vm.reconnect { SubNav.open("PairFail") } }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))

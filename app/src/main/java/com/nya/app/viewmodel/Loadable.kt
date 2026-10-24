@@ -21,6 +21,12 @@ sealed interface Loadable<out T> {
 
 fun <T> Loadable<T>.valueOrNull(): T? = (this as? Loadable.Ready)?.value
 
+fun <T, R> Loadable<T>.map(transform: (T) -> R): Loadable<R> = when (this) {
+    Loadable.Loading -> Loadable.Loading
+    is Loadable.Ready -> Loadable.Ready(transform(value))
+    is Loadable.Failed -> this
+}
+
 /** Shares [source] as a [Loadable] that can be re-collected with [retry]. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class Retryable<T>(scope: CoroutineScope, source: Flow<T>) {

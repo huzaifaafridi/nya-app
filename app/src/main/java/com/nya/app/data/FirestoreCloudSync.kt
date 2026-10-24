@@ -90,7 +90,9 @@ class FirestoreCloudSync(private val db: FirebaseFirestore = FirebaseFirestore.g
             mapOf(
                 "name" to doc.name, "link" to doc.link, "battery" to doc.battery,
                 "storageUsedGb" to doc.storageUsedGb, "storageTotalGb" to doc.storageTotalGb,
-                "firmware" to doc.firmware, "latestFirmware" to doc.latestFirmware
+                "firmware" to doc.firmware, "latestFirmware" to doc.latestFirmware, "autoSync" to doc.autoSync,
+                "captureQuality" to doc.captureQuality, "ledIndicator" to doc.ledIndicator,
+                "lost" to doc.lost, "lostAt" to doc.lostAt
             )
         )
     )
@@ -152,7 +154,12 @@ private fun DocumentSnapshot.toDeviceDoc(): DeviceDoc? {
         storageUsedGb = getDouble("storageUsedGb")?.toFloat() ?: return null,
         storageTotalGb = getDouble("storageTotalGb")?.toFloat() ?: return null,
         firmware = getString("firmware") ?: return null,
-        latestFirmware = getString("latestFirmware")
+        latestFirmware = getString("latestFirmware"),
+        autoSync = getBoolean("autoSync") ?: true,
+        captureQuality = getLong("captureQuality")?.toInt()?.coerceIn(0, 2) ?: DefaultCaptureQuality,
+        ledIndicator = getBoolean("ledIndicator") ?: true,
+        lost = getBoolean("lost") ?: false,
+        lostAt = getLong("lostAt")
     )
 }
 

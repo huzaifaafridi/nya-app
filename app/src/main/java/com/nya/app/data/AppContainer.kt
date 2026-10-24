@@ -9,6 +9,7 @@ import com.nya.app.data.ble.BleClient
 import com.nya.app.data.ble.SimulatedBleClient
 import com.nya.app.data.local.Migration1To2
 import com.nya.app.data.local.Migration2To3
+import com.nya.app.data.local.Migration3To4
 import com.nya.app.data.local.NyaDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,7 @@ class AppContainer(context: Context) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val ble: BleClient = SimulatedBleClient(appScope)
     private val db = Room.databaseBuilder(appContext, NyaDatabase::class.java, "nya.db")
-        .addMigrations(Migration1To2, Migration2To3)
+        .addMigrations(Migration1To2, Migration2To3, Migration3To4)
         .build()
 
     private val cloud: CloudSync = FirestoreCloudSync()
@@ -34,7 +35,7 @@ class AppContainer(context: Context) {
     val chat: ChatRepository = RoomChatRepository(
         db.chatDao(), cloud, auth.uid, profile, settings, GeminiReplyEngine(), appScope
     )
-    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), cloud, auth.uid, ble, appScope)
+    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), cloud, auth.uid, ble, SimulatedFirmwareCatalog(), appScope)
 
     init {
         SyncManager(

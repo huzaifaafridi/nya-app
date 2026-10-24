@@ -36,7 +36,7 @@ object NyaIcons {
     const val Up = "M12 19V5 M5 12l7-7 7 7"
     const val Play = "M8 5l11 7-11 7z"
     const val Stop = "M7 7h10v10H7z"
-    const val Filter = "M4 7h16 M7 12h10 M10 17h4"
+    const val Clear = "M6 6l12 12 M18 6L6 18"
     const val Search = "M11 5a6 6 0 1 0 0 12a6 6 0 1 0 0 -12z M16 16l4 4"
     const val Speaker = "M4 10v4h4l5 4V6L8 10z M16 9a4 4 0 0 1 0 6"
     const val Pin = "M12 7a3 3 0 1 0 0 6a3 3 0 1 0 0 -6z M12 21s7-6 7-11a7 7 0 0 0 -14 0c0 5 7 11 7 11z"

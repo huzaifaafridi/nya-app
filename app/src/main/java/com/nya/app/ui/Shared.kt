@@ -156,12 +156,15 @@ fun SubRouter(name: String, onBack: () -> Unit) {
     when (name) {
         "Settings" -> SettingsScreen(onBack)
         "Subscription" -> SubscriptionScreen(onBack)
+        "EditProfile" -> EditProfileScreen(onBack)
         "Help" -> HelpScreen(onBack)
         "ReadOnly" -> ReadOnlyScreen(onBack)
         "PairFail" -> PairFailScreen(onBack)
         "Transfer" -> TransferScreen(onBack)
         "FindMy" -> FindMyScreen(onBack)
         "Capture" -> CaptureScreen(onBack)
+        "HeadbandSettings" -> HeadbandSettingsScreen(onBack)
+        "Firmware" -> FirmwareScreen(onBack)
 
         else -> {}
     }

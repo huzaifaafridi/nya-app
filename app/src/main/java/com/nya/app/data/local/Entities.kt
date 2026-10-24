@@ -5,6 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.nya.app.data.ChatMessage
 import com.nya.app.data.Companion
+import com.nya.app.data.DefaultCaptureQuality
 import com.nya.app.data.DeviceInfo
 import com.nya.app.data.Gender
 import com.nya.app.data.Memory
@@ -45,7 +46,12 @@ data class DeviceEntity(
     val storageUsedGb: Float,
     val storageTotalGb: Float,
     val firmware: String,
-    val latestFirmware: String?
+    val latestFirmware: String?,
+    val autoSync: Boolean = true,
+    val captureQuality: Int = DefaultCaptureQuality,
+    val ledIndicator: Boolean = true,
+    val lost: Boolean = false,
+    val lostAt: Long? = null
 )
 
 /** One row per account; [updatedAt] is the epoch ms of the last user edit, 0 if never edited. */
@@ -71,7 +77,10 @@ fun MemoryEntity.toMemory() = Memory(
 
 fun ChatMessageEntity.toMessage() = ChatMessage(id, text, mine)
 
-fun DeviceEntity.toDeviceInfo() = DeviceInfo(name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware)
+fun DeviceEntity.toDeviceInfo() = DeviceInfo(
+    name, link, battery, storageUsedGb, storageTotalGb, firmware, latestFirmware,
+    autoSync = autoSync, captureQuality = captureQuality, ledIndicator = ledIndicator, lost = lost, lostAt = lostAt
+)
 
 fun ProfileEntity.toProfile(): Profile {
     val d = Profile()

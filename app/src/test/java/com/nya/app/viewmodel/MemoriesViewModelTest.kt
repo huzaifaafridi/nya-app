@@ -6,6 +6,7 @@ import com.nya.app.MainDispatcherRule
 import com.nya.app.data.FakeMemoryRepository
 import com.nya.app.data.Memory
 import com.nya.app.data.MemoryRepository
+import com.nya.app.data.Scene
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -16,6 +17,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.ZoneOffset
 
 class MemoriesViewModelTest {
     @get:Rule val main = MainDispatcherRule()
@@ -66,5 +68,29 @@ class MemoriesViewModelTest {
         vm.delete(1)
         runCurrent()
         assertEquals(listOf(2L), (vm.memories.value as Loadable.Ready).value.map { it.id })
+    }
+
+    @Test
+    fun visibleCombinesQueryAndFilter() = runTest {
+        val now = 1_700_000_000_000L // fixed, so the days never depend on the clock
+        val repo = object : MemoryRepository {
+            override val memories = flowOf(listOf(
+                Memory(1, "Sunset", "Karachi", "Golden hour", Scene.Sea, now, 8),
+                Memory(2, "Beach day", "Sea View", "Windy", Scene.Mount, now - 24 * 60 * 60 * 1000L)
+            ))
+            override suspend fun delete(id: Long) = Unit
+        }
+        val vm = MemoriesViewModel(repo, { now }, { ZoneOffset.UTC })
+        runCurrent()
+        fun labels() = (vm.visible.value as Loadable.Ready).value.map { it.label }
+        assertEquals(listOf("TODAY", "YESTERDAY"), labels())
+        vm.setQuery("beach")
+        runCurrent()
+        assertEquals(listOf("YESTERDAY"), labels())
+        vm.setFilter(MemoryFilter.Clips)
+        runCurrent()
+        assertEquals(emptyList<String>(), labels())
+        assertEquals("beach", vm.query.value)
+        assertEquals(MemoryFilter.Clips, vm.filter.value)
     }
 }
