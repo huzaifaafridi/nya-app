@@ -116,12 +116,26 @@ class ChatTest {
     @Test
     fun replyIsStillSavedAfterTheViewModelIsCleared() = runTest {
         val chat = FakeChatRepository(engine { delay(500); emit("still here") }, backgroundScope)
-        val vm = ChatViewModel(chat)
+        val vm = ChatViewModel(chat, MutableStateFlow(AppConfig()))
         vm.send("hi")
         runCurrent()
         vm.viewModelScope.cancel()
         settle()
         assertEquals(listOf("hi", "still here"), chat.texts())
+    }
+
+    @Test
+    fun sendIsRefusedWhileAiChatIsOff() = runTest {
+        val chat = FakeChatRepository(engine { emit("ok") }, backgroundScope)
+        val config = MutableStateFlow(AppConfig(features = FeatureFlags(aiChat = false)))
+        val vm = ChatViewModel(chat, config)
+        vm.send("hi")
+        settle()
+        assertEquals(emptyList<String>(), chat.texts())
+        config.value = AppConfig()
+        vm.send("hi")
+        settle()
+        assertEquals(listOf("hi", "ok"), chat.texts())
     }
 
     /** "old" hangs and then lingers in cleanup after cancellation; anything else streams "new" and hangs. */

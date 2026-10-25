@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nya.app.data.AppConfig
 import com.nya.app.data.Prefs
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.ui.theme.NyaDark
@@ -33,6 +34,7 @@ object SubNav {
 }
 
 val LocalPrefs = compositionLocalOf { Prefs() }
+val LocalConfig = compositionLocalOf { AppConfig() }
 
 // status colors: lighter on dark, darker on light so the text keeps its contrast
 val NyaGreen: Color @Composable get() = if (LocalNya.current == NyaDark) Color(0xFF6BCB8B) else Color(0xFF1E7A45)

@@ -33,7 +33,7 @@ fun EditProfileScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(24.dp))
                 Text("Companion", color = c.sb, fontSize = 12.sp)
                 Spacer(Modifier.height(10.dp))
-                CompanionList(draft.companion, vm::setCompanion)
+                CompanionList(draft.companion, LocalConfig.current.companions, vm::setCompanion)
                 Spacer(Modifier.height(8.dp))
                 VoicePicker(LocalPrefs.current.copy(
                     name = draft.name, companion = draft.companion, gender = draft.gender, voice = draft.voice

@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nya.app.BuildConfig
 import com.nya.app.ui.theme.LocalNya
 import com.nya.app.viewmodel.AppViewModel
 
@@ -26,6 +28,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
+    val legal = LocalConfig.current.legal
+    val context = LocalContext.current
     val seg = RoundedCornerShape(16.dp)
 
     Column(Modifier.fillMaxSize().nyaBg()) {
@@ -84,7 +88,15 @@ fun SettingsScreen(onBack: () -> Unit) {
                 XDivider()
                 XRow("Read-only mode preview") { SubNav.open("ReadOnly") }
                 XDivider()
-                XRow("Version", "0.1.0")
+                legal.privacyUrl.takeIf { it.isNotEmpty() }?.let {
+                    XRow("Privacy policy") { context.openUrl(it) }
+                    XDivider()
+                }
+                legal.termsUrl.takeIf { it.isNotEmpty() }?.let {
+                    XRow("Terms of service") { context.openUrl(it) }
+                    XDivider()
+                }
+                XRow("Version", BuildConfig.VERSION_NAME)
             }
 
             Spacer(Modifier.height(24.dp))

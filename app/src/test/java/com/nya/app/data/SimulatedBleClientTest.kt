@@ -4,7 +4,6 @@ package com.nya.app.data
 
 import com.nya.app.data.ble.FirmwareStep
 import com.nya.app.data.ble.LinkState
-import com.nya.app.data.ble.NyaBleUuids
 import com.nya.app.data.ble.SimulatedBleClient
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -40,7 +39,7 @@ class SimulatedBleClientTest {
         assertTrue(result.await().isSuccess)
         assertEquals(LinkState.Connected, ble.state.value)
         val status = ble.status.value!!
-        assertTrue(status.name.startsWith(NyaBleUuids.NAME_PREFIX))
+        assertTrue(status.name.startsWith(BleConfig().namePrefix))
         assertEquals(0.82f, status.battery, 1e-6f)
         assertEquals(4.1f, status.storageUsedGb, 1e-6f)
         assertEquals(16f, status.storageTotalGb, 1e-6f)

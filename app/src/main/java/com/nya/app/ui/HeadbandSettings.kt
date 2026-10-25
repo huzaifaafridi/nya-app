@@ -84,8 +84,10 @@ private fun SettingsForm(d: DeviceInfo, vm: DeviceViewModel) {
                 LinkState.Connecting -> "Connecting…"
                 LinkState.Disconnected -> "Disconnected"
             })
-            XDivider()
-            XRow("Check for updates") { SubNav.open("Firmware") }
+            if (LocalConfig.current.features.firmwareUpdates) {
+                XDivider()
+                XRow("Check for updates") { SubNav.open("Firmware") }
+            }
         }
 
         Spacer(Modifier.height(24.dp))

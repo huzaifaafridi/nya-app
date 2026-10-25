@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
@@ -42,6 +43,7 @@ import kotlinx.coroutines.delay
 fun ChatScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
+    val features = LocalConfig.current.features
     val vm = viewModel<ChatViewModel>(factory = ChatViewModel.Factory)
     val state by vm.messages.collectAsState()
     val msgs = state.valueOrNull().orEmpty()
@@ -57,7 +59,7 @@ fun ChatScreen(onBack: () -> Unit) {
     val lastOld = remember(loaded) { msgs.maxOfOrNull { it.id } ?: 0L }
 
     fun send(t: String = input) {
-        if (loaded && draft == null && t.isNotBlank()) {
+        if (features.aiChat && loaded && draft == null && t.isNotBlank()) {
             vm.send(t)
             input = ""
         }
@@ -68,7 +70,7 @@ fun ChatScreen(onBack: () -> Unit) {
         val last = msgs.lastOrNull()
         if (last != null && last.id > lastOld && !last.mine) {
             val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
-            if (!prefs.quiet && voice != null) VoiceEngine.speak(last.text, voice)
+            if (features.voiceReplies && !prefs.quiet && voice != null) VoiceEngine.speak(last.text, voice)
             else {
                 speaking = true
                 delay(1600)
@@ -128,18 +130,21 @@ fun ChatScreen(onBack: () -> Unit) {
                     .semantics { liveRegion = LiveRegionMode.Polite })
         }
 
-        // quick replies
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 17.dp, vertical = 6.dp)) {
-            listOf("Summarize my day", "Best shot today").forEach {
-                NyaChip(it, false, { send(it) })
+        if (features.aiChat) {
+            // quick replies
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 17.dp, vertical = 6.dp)) {
+                listOf("Summarize my day", "Best shot today").forEach {
+                    NyaChip(it, false, { send(it) })
+                }
             }
-        }
+        } else Text("Chat is paused right now. Please try again later.", color = c.sb, fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Polite })
 
         // input pill
         val pill = RoundedCornerShape(29.dp)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-                .heightIn(min = 58.dp).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
+                .heightIn(min = 58.dp).alpha(if (features.aiChat) 1f else .5f).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
                 .padding(start = 20.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -151,6 +156,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     textStyle = TextStyle(color = c.tx, fontSize = 15.sp),
                     cursorBrush = SolidColor(c.ac),
                     singleLine = true,
+                    enabled = features.aiChat,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Message" }

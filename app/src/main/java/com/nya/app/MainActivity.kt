@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private fun showContent(first: Prefs) {
         setContent {
             val prefs = app.prefs.collectAsState().value ?: first
+            val config = app.config.collectAsState().value
             NyaTheme(dark = when (prefs.theme) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }) {
                 var s by remember { mutableStateOf(if (first.onboarded && app.isSignedIn) Screen.Home else Screen.Welcome) }
                 var memId by remember { mutableLongStateOf(0L) }
@@ -69,8 +70,11 @@ class MainActivity : ComponentActivity() {
                 val reduce = rememberReduceMotion()
                 val slide = with(LocalDensity.current) { 24.dp.roundToPx() }
                 val dest = Dest(s, if (s == Screen.Sub) sub else "", if (s == Screen.Sub) subStack.size else 0)
-                CompositionLocalProvider(LocalPrefs provides prefs, LocalReduceMotion provides reduce) {
-                    AnimatedContent(
+                CompositionLocalProvider(LocalPrefs provides prefs, LocalConfig provides config, LocalReduceMotion provides reduce) {
+                    // gates sit above every screen, auth included; `s` and the stacks survive them
+                    if (config.updateRequired(BuildConfig.VERSION_CODE)) UpdateRequiredScreen()
+                    else if (config.maintenance) MaintenanceScreen(config.maintenanceMessage)
+                    else AnimatedContent(
                         targetState = dest,
                         transitionSpec = { screenTransition(targetState.isAfter(initialState), slide, reduce) },
                         label = "nav"

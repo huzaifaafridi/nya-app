@@ -117,6 +117,7 @@ private fun NavItem(t: Tab, selected: Boolean, modifier: Modifier, onClick: () -
 fun HomeScreen(onSeeAll: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
+    val voiceReplies = LocalConfig.current.features.voiceReplies
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
     val memories = viewModel<MemoriesViewModel>(factory = MemoriesViewModel.Factory)
     val state = memories.memories.collectAsState().value
@@ -181,7 +182,7 @@ fun HomeScreen(onSeeAll: () -> Unit) {
             // tapping the avatar says hello instead of opening Chat
             Box(Modifier.pressScale(description = "Say hello") {
                 val voice = VoiceEngine.chosen(prefs.gender, prefs.voice)
-                if (!prefs.quiet && voice != null) VoiceEngine.speak("Hello, ${prefs.name}!", voice)
+                if (voiceReplies && !prefs.quiet && voice != null) VoiceEngine.speak("Hello, ${prefs.name}!", voice)
             }) {
                 NyaOrb(56.dp) {
                     Avatar2D(

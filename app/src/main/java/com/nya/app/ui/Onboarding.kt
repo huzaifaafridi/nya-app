@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nya.app.data.Companion
+import com.nya.app.data.CompanionConfig
 import com.nya.app.data.Gender
 import com.nya.app.data.Prefs
 import com.nya.app.data.ble.LinkState
@@ -97,23 +98,15 @@ fun CompanionScreen(onContinue: () -> Unit, onBack: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Para("Each one thinks and talks a little differently. You can change this later in Settings.")
         Spacer(Modifier.height(24.dp))
-        CompanionList(Companion.entries[sel]) { sel = it.ordinal }
+        CompanionList(Companion.entries[sel], LocalConfig.current.companions) { sel = it.ordinal }
         Spacer(Modifier.height(12.dp))
         NyaButton("Continue", { app.setCompanion(Companion.entries[sel]); onContinue() })
     }
 }
 
-private val CompanionBlurbs = listOf(
-    "Curious about places and discoveries",
-    "Style, taste and inspiration",
-    "Calm, clear answers",
-    "Mindful and steady",
-    "Ideas and making things"
-)
-
 /** The five companion cards as a radio group; the avatar uses the profile's skin and gender. */
 @Composable
-fun CompanionList(selected: Companion, onSelect: (Companion) -> Unit) {
+fun CompanionList(selected: Companion, companions: Map<Companion, CompanionConfig>, onSelect: (Companion) -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     Companion.entries.forEach { companion ->
@@ -133,7 +126,7 @@ fun CompanionList(selected: Companion, onSelect: (Companion) -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column {
                 Text(companion.name, color = c.tx, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Text(CompanionBlurbs[companion.ordinal], color = c.sb, fontSize = 13.sp)
+                Text(companions.getValue(companion).tagline, color = c.sb, fontSize = 13.sp)
             }
         }
     }

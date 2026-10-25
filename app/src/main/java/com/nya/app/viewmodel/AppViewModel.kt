@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nya.app.NyaApp
+import com.nya.app.data.AppConfig
+import com.nya.app.data.AppConfigRepository
 import com.nya.app.data.AppSettings
 import com.nya.app.data.AuthRepository
 import com.nya.app.data.Companion as CompanionType
@@ -26,8 +28,11 @@ import kotlinx.coroutines.launch
 class AppViewModel(
     private val settings: SettingsRepository,
     private val profile: ProfileRepository,
-    private val auth: AuthRepository
+    private val auth: AuthRepository,
+    appConfig: AppConfigRepository
 ) : ViewModel() {
+    val config: StateFlow<AppConfig> = appConfig.config
+
     val prefs: StateFlow<Prefs?> = combine(settings.settings, profile.profile) { s, p ->
         Prefs(p.name, p.companion, p.skin, p.gender, p.voice, p.notifications, s.theme, s.quiet, s.mode, s.onboarded)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -65,7 +70,7 @@ class AppViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val c = (this[APPLICATION_KEY] as NyaApp).container
-                AppViewModel(c.settings, c.profile, c.auth)
+                AppViewModel(c.settings, c.profile, c.auth, c.appConfig)
             }
         }
     }

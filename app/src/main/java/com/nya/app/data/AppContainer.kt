@@ -21,7 +21,8 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     private val userStore: DataStore<Preferences> = appContext.userDataStore
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val ble: BleClient = SimulatedBleClient(appScope)
+    val appConfig: AppConfigRepository = FirestoreAppConfigRepository(appScope)
+    private val ble: BleClient = SimulatedBleClient(appScope) { appConfig.config.value.ble.namePrefix }
     private val db = Room.databaseBuilder(appContext, NyaDatabase::class.java, "nya.db")
         .addMigrations(Migration1To2, Migration2To3, Migration3To4)
         .build()
@@ -33,9 +34,9 @@ class AppContainer(context: Context) {
     val profile: ProfileRepository = RoomProfileRepository(db.profileDao(), cloud, auth.uid, userStore)
     val memories: MemoryRepository = RoomMemoryRepository(db.memoryDao(), cloud, auth.uid)
     val chat: ChatRepository = RoomChatRepository(
-        db.chatDao(), cloud, auth.uid, profile, settings, GeminiReplyEngine(), appScope
+        db.chatDao(), cloud, auth.uid, profile, settings, GeminiReplyEngine(appConfig), appScope
     )
-    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), cloud, auth.uid, ble, SimulatedFirmwareCatalog(), appScope)
+    val device: DeviceRepository = RoomDeviceRepository(db.deviceDao(), cloud, auth.uid, ble, ConfigFirmwareCatalog(appConfig), appScope)
 
     init {
         SyncManager(

@@ -1,7 +1,7 @@
 // Firestore security rules for Nya.
 //
 // Deploy: Firebase console -> Firestore Database -> Rules -> paste this file -> Publish.
-// Everything not matched below is denied. Rules for appConfig arrive in Phase 10.
+// Everything not matched below is denied.
 //
 // These must stay in step with the writes in FirestoreCloudSync.kt.
 rules_version = '2';
@@ -15,6 +15,12 @@ service cloud.firestore {
 
     function validPlatform(value) {
       return value is string && value in ['android', 'ios'];
+    }
+
+    // appConfig: public, read-only for apps; the admin dashboard writes with the Admin SDK (bypasses rules).
+    match /appConfig/{doc} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // users/{uid}: created once with server timestamps; afterwards only lastActiveAt and platform can change.

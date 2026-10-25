@@ -1,18 +1,13 @@
 package com.nya.app.data
 
-import kotlinx.coroutines.delay
-
 interface FirmwareCatalog {
     /** The newest published firmware version, or null if none could be found. */
     suspend fun latest(): String?
 }
 
-/** Fake catalog; Phase 10 moves this to appConfig. */
-class SimulatedFirmwareCatalog : FirmwareCatalog {
-    override suspend fun latest(): String? {
-        delay(800)
-        return "1.2.0"
-    }
+/** Latest firmware version published in the remote config. */
+class ConfigFirmwareCatalog(private val appConfig: AppConfigRepository) : FirmwareCatalog {
+    override suspend fun latest(): String? = appConfig.config.value.firmwareLatest
 }
 
 /** Compares dotted versions numerically, so "1.10.0" is newer than "1.9.0". */

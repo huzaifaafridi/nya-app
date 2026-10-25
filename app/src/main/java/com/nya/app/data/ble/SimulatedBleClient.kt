@@ -1,5 +1,6 @@
 package com.nya.app.data.ble
 
+import com.nya.app.data.BleConfig
 import com.nya.app.data.HeadbandSettings
 import com.nya.app.data.TransferItem
 import kotlinx.coroutines.CancellationException
@@ -30,7 +31,10 @@ private const val FIRMWARE_STEPS = 40
  * Fake headband: every 3rd connection attempt fails so the pairing error path is reachable.
  * Path: auto-connect = attempt 1, Reconnect = 2 (ok), Reconnect = 3 (fails); connecting while connected doesn't count.
  */
-class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
+class SimulatedBleClient(
+    private val scope: CoroutineScope,
+    private val namePrefix: () -> String = { BleConfig().namePrefix }
+) : BleClient {
     private val _state = MutableStateFlow(LinkState.Disconnected)
     private val _status = MutableStateFlow<DeviceStatus?>(null)
     private val _ringing = MutableStateFlow(false)
@@ -39,7 +43,7 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
     private var attempts = 0
     private var generation = 0
     private var battery = 0.82f
-    private var name = "${NyaBleUuids.NAME_PREFIX} F1"
+    private var name: String? = null
     private var firmware = "1.1.4"
     private var drainJob: Job? = null
     private var ringJob: Job? = null
@@ -69,7 +73,7 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
                     Result.failure(IllegalStateException("Headband not found"))
                 }
                 else -> {
-                    _status.value = DeviceStatus(name, battery, 4.1f, 16f, firmware)
+                    _status.value = DeviceStatus(name ?: "${namePrefix()} F1", battery, 4.1f, 16f, firmware)
                     _state.value = LinkState.Connected
                     drainJob = scope.launch {
                         while (true) {
@@ -116,7 +120,7 @@ class SimulatedBleClient(private val scope: CoroutineScope) : BleClient {
         return synchronized(lock) {
             if (generation != gen) return@synchronized Result.failure(IllegalStateException("Disconnected"))
             name = settings.name
-            _status.update { s -> s?.copy(name = name) }
+            _status.update { s -> s?.copy(name = settings.name) }
             Result.success(Unit)
         }
     }

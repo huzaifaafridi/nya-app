@@ -13,18 +13,15 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 
-// Tried in order; a quota or server error (e.g. high demand) on one model moves on to the next.
-private const val MODEL_PRIMARY = "gemini-3.8-flash"
-private const val MODEL_FALLBACK_1 = "gemini-3.7-flash"
-private const val MODEL_FALLBACK_2 = "gemini-3.5-flash-lite"
-private const val MODEL_FALLBACK_3 = "gemini-3.1-flash-lite"
-private val MODELS = listOf(MODEL_PRIMARY, MODEL_FALLBACK_1, MODEL_FALLBACK_2, MODEL_FALLBACK_3)
 private const val MaxMessages = 30
 
-class GeminiReplyEngine : ReplyEngine {
+/** Reads models, prompt and companion traits from the config on every request, so remote changes apply to the next message. */
+class GeminiReplyEngine(private val appConfig: AppConfigRepository) : ReplyEngine {
     override fun reply(history: List<ChatMessage>, persona: ChatPersona): Flow<String> {
         // TODO: add Firebase App Check (Play Integrity + debug provider) and enforce it for AI Logic before release.
-        val system = content { text(systemPrompt(persona)) }
+        val config = appConfig.config.value
+        val models = config.ai.models
+        val system = content { text(buildSystemPrompt(config, persona)) }
         val turns = history.takeLast(MaxMessages).dropWhile { !it.mine }
             .map { content(if (it.mine) "user" else "model") { text(it.text) } }
         fun stream(name: String) = Firebase.ai(backend = GenerativeBackend.googleAI())
@@ -32,7 +29,7 @@ class GeminiReplyEngine : ReplyEngine {
             .generateContentStream(turns)
             .map { it.text.orEmpty() }
             .filter { it.isNotEmpty() }
-        val withFallbacks = MODELS.zipWithNext().fold(stream(MODELS.first())) { flow, (failed, next) ->
+        val withFallbacks = models.zipWithNext().fold(stream(models.first())) { flow, (failed, next) ->
             flow.catch {
                 if (it !is QuotaExceededException && it !is ServerException) throw it
                 Log.w("NyaAI", "$failed unavailable (${it::class.java.simpleName}), falling back to $next")
@@ -44,20 +41,12 @@ class GeminiReplyEngine : ReplyEngine {
             throw it
         }
     }
+}
 
-    private fun systemPrompt(persona: ChatPersona): String {
-        val trait = when (persona.companion) {
-            Companion.Wanderer -> "curious about places and discoveries"
-            Companion.Muse -> "attuned to style, taste and inspiration"
-            Companion.Guide -> "calm, giving clear answers"
-            Companion.Yogi -> "mindful and steady"
-            Companion.Creator -> "full of ideas and eager to make things"
-        }
-        val user = if (persona.userName.isBlank()) "" else " The user's name is ${persona.userName}."
-        return "You are Nya, a warm AI companion inside a wearable memory headband app. " +
-            "Your personality is ${persona.companion.name}: $trait.$user " +
-            "The current mode is ${ModeLabels.getOrElse(persona.mode) { ModeLabels[0] }}. " +
-            "Reply in 1-3 short, conversational sentences of plain text with no markdown, lists or emojis, " +
-            "because replies may be spoken aloud. Never claim to have done actions you cannot do."
-    }
+/** The configured prompt followed by the user's persona: companion personality, name and current mode. */
+internal fun buildSystemPrompt(config: AppConfig, persona: ChatPersona): String {
+    val trait = config.companions.getValue(persona.companion).trait
+    val user = if (persona.userName.isBlank()) "" else " The user's name is ${persona.userName}."
+    return "${config.ai.systemPrompt} Your personality is ${persona.companion.name}: $trait.$user " +
+        "The current mode is ${ModeLabels.getOrElse(persona.mode) { ModeLabels[0] }}."
 }

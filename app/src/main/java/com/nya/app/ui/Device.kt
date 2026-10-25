@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 @Composable
 fun DeviceScreen() {
     val c = LocalNya.current
+    val features = LocalConfig.current.features
     val vm = viewModel<DeviceViewModel>(factory = DeviceViewModel.Factory)
     val state = vm.device.collectAsState().value
     val connecting by vm.connecting.collectAsState()
@@ -50,7 +51,7 @@ fun DeviceScreen() {
                 EmptyState("No headband paired", "Pair your Nya headband to see battery, storage and updates.", Modifier.padding(vertical = 40.dp))
                 return@LoadableContent
             }
-            if (d.lost) {
+            if (d.lost && features.findMy) {
                 Spacer(Modifier.height(16.dp))
                 Row(
                     Modifier.fillMaxWidth().pressScale { SubNav.open("FindMy") }.clip(card).background(c.sf)
@@ -91,7 +92,7 @@ fun DeviceScreen() {
                 StatCard("STORAGE", "${d.storageUsedGb} of ${d.storageTotalGb.roundToInt()} GB", d.storageUsedGb / d.storageTotalGb, Modifier.weight(1f), delayMs = 3 * Motion.STAGGER)
             }
 
-            d.latestFirmware?.let {
+            d.latestFirmware?.takeIf { features.firmwareUpdates }?.let {
                 Spacer(Modifier.height(10.dp))
                 Row(
                     Modifier.fillMaxWidth().staggerIn(3).clip(card).background(c.sf).border(1.dp, c.ac, card).padding(16.dp),
@@ -114,8 +115,10 @@ fun DeviceScreen() {
 
             Spacer(Modifier.height(10.dp))
             Column(Modifier.fillMaxWidth().staggerIn(4).clip(card).background(c.sf).border(1.dp, c.ln, card)) {
-                DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
+                if (features.findMy) {
+                    DevRow(NyaIcons.Pin, "Find My Nya", chevron = true) { SubNav.open("FindMy") }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
+                }
                 DevRow(NyaIcons.Gear, "Headband settings", chevron = true) { SubNav.open("HeadbandSettings") }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(c.ln))
                 DevRow(NyaIcons.Refresh, "Reconnect") { vm.reconnect { SubNav.open("PairFail") } }

@@ -73,7 +73,7 @@ fun MemoryDetailScreen(id: Long, onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 26.dp, bottom = 8.dp))
             Text(m.note, color = c.tx, fontSize = 16.sp, lineHeight = 24.sp)
             Row(Modifier.padding(top = 30.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NyaButton("Share", onClick = { share(m) }, modifier = Modifier.weight(1f))
+                if (LocalConfig.current.features.share) NyaButton("Share", onClick = { share(m) }, modifier = Modifier.weight(1f))
                 NyaOutlineButton("Delete", onClick = { vm.delete(id); onBack() }, modifier = Modifier.weight(1f))
             }
         }
