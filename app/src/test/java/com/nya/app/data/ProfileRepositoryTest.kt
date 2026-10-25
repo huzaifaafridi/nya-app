@@ -26,7 +26,7 @@ internal class FakeProfileDao : ProfileDao() {
     override suspend fun upsert(profile: ProfileEntity) { rows.value += profile.uid to profile }
 }
 
-private class FakeStore(initial: Preferences) : DataStore<Preferences> {
+internal class FakeStore(initial: Preferences) : DataStore<Preferences> {
     private val state = MutableStateFlow(initial)
     override val data: Flow<Preferences> = state
 

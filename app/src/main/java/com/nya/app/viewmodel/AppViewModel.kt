@@ -13,8 +13,10 @@ import com.nya.app.data.AppConfig
 import com.nya.app.data.AppConfigRepository
 import com.nya.app.data.AppSettings
 import com.nya.app.data.AuthRepository
+import com.nya.app.data.BillingRepository
 import com.nya.app.data.Companion as CompanionType
 import com.nya.app.data.Gender
+import com.nya.app.data.Plan
 import com.nya.app.data.Prefs
 import com.nya.app.data.Profile
 import com.nya.app.data.ProfileRepository
@@ -29,9 +31,11 @@ class AppViewModel(
     private val settings: SettingsRepository,
     private val profile: ProfileRepository,
     private val auth: AuthRepository,
+    billing: BillingRepository,
     appConfig: AppConfigRepository
 ) : ViewModel() {
     val config: StateFlow<AppConfig> = appConfig.config
+    val plan: StateFlow<Plan> = billing.plan.stateIn(viewModelScope, SharingStarted.Eagerly, Plan.Free)
 
     val prefs: StateFlow<Prefs?> = combine(settings.settings, profile.profile) { s, p ->
         Prefs(p.name, p.companion, p.skin, p.gender, p.voice, p.notifications, s.theme, s.quiet, s.mode, s.onboarded)
@@ -70,7 +74,7 @@ class AppViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val c = (this[APPLICATION_KEY] as NyaApp).container
-                AppViewModel(c.settings, c.profile, c.auth, c.appConfig)
+                AppViewModel(c.settings, c.profile, c.auth, c.billing, c.appConfig)
             }
         }
     }

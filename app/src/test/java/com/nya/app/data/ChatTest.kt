@@ -14,8 +14,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -26,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -37,6 +40,15 @@ class ChatTest {
         advanceTimeBy(1_000)
         runCurrent()
     }
+
+    private class FakeUsage(start: Int = 0) : UsageRepository {
+        val count = MutableStateFlow(start)
+        override fun today() = count
+        override suspend fun recordMessage() { count.value++ }
+    }
+
+    private fun chatVm(chat: ChatRepository, config: StateFlow<AppConfig>, usage: UsageRepository, plan: Plan = Plan.Free) =
+        ChatViewModel(chat, config, flowOf(plan), usage)
 
     private val busy = "Nya is busy right now, try again in a moment."
 
@@ -116,7 +128,7 @@ class ChatTest {
     @Test
     fun replyIsStillSavedAfterTheViewModelIsCleared() = runTest {
         val chat = FakeChatRepository(engine { delay(500); emit("still here") }, backgroundScope)
-        val vm = ChatViewModel(chat, MutableStateFlow(AppConfig()))
+        val vm = chatVm(chat, MutableStateFlow(AppConfig()), FakeUsage())
         vm.send("hi")
         runCurrent()
         vm.viewModelScope.cancel()
@@ -128,7 +140,7 @@ class ChatTest {
     fun sendIsRefusedWhileAiChatIsOff() = runTest {
         val chat = FakeChatRepository(engine { emit("ok") }, backgroundScope)
         val config = MutableStateFlow(AppConfig(features = FeatureFlags(aiChat = false)))
-        val vm = ChatViewModel(chat, config)
+        val vm = chatVm(chat, config, FakeUsage())
         vm.send("hi")
         settle()
         assertEquals(emptyList<String>(), chat.texts())
@@ -136,6 +148,42 @@ class ChatTest {
         vm.send("hi")
         settle()
         assertEquals(listOf("hi", "ok"), chat.texts())
+    }
+
+    @Test
+    fun sendIsRefusedOnceTheDailyLimitIsReached() = runTest {
+        val chat = FakeChatRepository(engine { emit("ok") }, backgroundScope)
+        val usage = FakeUsage(start = 30)
+        val vm = chatVm(chat, MutableStateFlow(AppConfig()), usage)
+        runCurrent()
+        assertTrue(vm.quota.value.reached)
+        vm.send("hi")
+        settle()
+        assertEquals(emptyList<String>(), chat.texts())
+        assertEquals(30, usage.count.value)
+    }
+
+    @Test
+    fun upgradingThePlanLiftsTheLimit() = runTest {
+        val chat = FakeChatRepository(engine { emit("ok") }, backgroundScope)
+        val vm = chatVm(chat, MutableStateFlow(AppConfig()), FakeUsage(start = 30), Plan.Plus)
+        runCurrent()
+        vm.send("hi")
+        settle()
+        assertEquals(listOf("hi", "ok"), chat.texts())
+    }
+
+    @Test
+    fun sendRecordsOneUsage() = runTest {
+        val chat = FakeChatRepository(engine { emit("ok") }, backgroundScope)
+        val usage = FakeUsage()
+        val vm = chatVm(chat, MutableStateFlow(AppConfig()), usage)
+        runCurrent()
+        vm.send("hi")
+        vm.send("   ")
+        settle()
+        assertEquals(1, usage.count.value)
+        assertEquals(29, vm.quota.value.remaining)
     }
 
     /** "old" hangs and then lingers in cleanup after cancellation; anything else streams "new" and hangs. */

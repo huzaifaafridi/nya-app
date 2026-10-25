@@ -23,6 +23,6 @@ Numbers may be integers or decimals.
 | `companions.<name>.tagline` | string (1-200) | built-in tagline | Short description on the companion cards |
 | `voiceStyles` | array of 1-6 `{name (1-40), femalePitch, malePitch}` | Calm, Warm, Bright, Deep | Voice choices; pitches 0.5-2.0. Any invalid entry or wrong count = whole default list. Keep the order stable: users save the position |
 | `voiceRate` | number 0.5-2.0 | `0.85` | Speech speed |
-| `plans.<free\|plus\|pro>.dailyMessages` | number (>= 0) | 30 / 200 / 1000 | Daily AI message limit per plan (not enforced yet) |
+| `plans.<free\|plus\|pro>.dailyMessages` | number (>= 0) | 30 / 200 / 1000 | Daily AI message limit per plan; 0 = unlimited. Counted on the device for now |
 | `features.aiChat`, `voiceReplies`, `findMy`, `firmwareUpdates`, `share` | boolean | `true` | Turns a feature off |
 | `legal.privacyUrl`, `legal.termsUrl` | string, http(s) URL | empty | Links to the policies; anything else is treated as empty |

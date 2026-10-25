@@ -49,6 +49,8 @@ fun ChatScreen(onBack: () -> Unit) {
     val msgs = state.valueOrNull().orEmpty()
     val draft by vm.draft.collectAsState()
     val error by vm.error.collectAsState()
+    val quota by vm.quota.collectAsState()
+    val canChat = features.aiChat && !quota.reached
     val typing = draft == ""
     var input by remember { mutableStateOf("") }
     var speaking by remember { mutableStateOf(false) }
@@ -59,7 +61,7 @@ fun ChatScreen(onBack: () -> Unit) {
     val lastOld = remember(loaded) { msgs.maxOfOrNull { it.id } ?: 0L }
 
     fun send(t: String = input) {
-        if (features.aiChat && loaded && draft == null && t.isNotBlank()) {
+        if (canChat && loaded && draft == null && t.isNotBlank()) {
             vm.send(t)
             input = ""
         }
@@ -130,21 +132,32 @@ fun ChatScreen(onBack: () -> Unit) {
                     .semantics { liveRegion = LiveRegionMode.Polite })
         }
 
-        if (features.aiChat) {
+        if (!features.aiChat) Text("Chat is paused right now. Please try again later.", color = c.sb, fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Polite })
+        else if (quota.reached) Column(
+            Modifier.padding(horizontal = 20.dp, vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Polite }
+        ) {
+            Text("You've used today's ${quota.limit} messages. Upgrade your plan or come back tomorrow.", color = c.sb, fontSize = 13.sp)
+            Spacer(Modifier.height(10.dp))
+            XGhost("See plans", { SubNav.open("Subscription") })
+        } else {
             // quick replies
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 17.dp, vertical = 6.dp)) {
                 listOf("Summarize my day", "Best shot today").forEach {
                     NyaChip(it, false, { send(it) })
                 }
             }
-        } else Text("Chat is paused right now. Please try again later.", color = c.sb, fontSize = 13.sp,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Polite })
+            if (!quota.unlimited && quota.remaining <= 5) Text(
+                "${quota.remaining} ${if (quota.remaining == 1) "message" else "messages"} left today", color = c.sb, fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+        }
 
         // input pill
         val pill = RoundedCornerShape(29.dp)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-                .heightIn(min = 58.dp).alpha(if (features.aiChat) 1f else .5f).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
+                .heightIn(min = 58.dp).alpha(if (canChat) 1f else .5f).clip(pill).background(c.sf).border(1.dp, c.ln, pill)
                 .padding(start = 20.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -156,7 +169,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     textStyle = TextStyle(color = c.tx, fontSize = 15.sp),
                     cursorBrush = SolidColor(c.ac),
                     singleLine = true,
-                    enabled = features.aiChat,
+                    enabled = canChat,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { send() }),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Message" }

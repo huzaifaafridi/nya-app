@@ -31,6 +31,8 @@ class AppContainer(context: Context) {
 
     val auth: AuthRepository = FirebaseAuthRepository()
     val settings: SettingsRepository = DataStoreSettingsRepository(userStore)
+    val billing: BillingRepository = FakeBillingRepository(userStore, auth.uid)
+    val usage: UsageRepository = DataStoreUsageRepository(userStore, auth.uid)
     val profile: ProfileRepository = RoomProfileRepository(db.profileDao(), cloud, auth.uid, userStore)
     val memories: MemoryRepository = RoomMemoryRepository(db.memoryDao(), cloud, auth.uid)
     val chat: ChatRepository = RoomChatRepository(

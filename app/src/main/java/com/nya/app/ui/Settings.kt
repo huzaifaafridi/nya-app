@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +30,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val c = LocalNya.current
     val prefs = LocalPrefs.current
     val app = viewModel<AppViewModel>(factory = AppViewModel.Factory)
+    val plan by app.plan.collectAsState()
     val legal = LocalConfig.current.legal
     val context = LocalContext.current
     val seg = RoundedCornerShape(16.dp)
@@ -51,7 +54,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Spacer(Modifier.width(14.dp))
                     Column {
                         Text(prefs.name, color = c.tx, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Free plan", color = c.sb, fontSize = 13.sp)
+                        Text("${plan.name} plan", color = c.sb, fontSize = 13.sp)
                     }
                 }
             }
@@ -82,7 +85,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             XCard(Modifier.staggerIn(6)) {
                 XRow("Edit profile") { SubNav.open("EditProfile") }
                 XDivider()
-                XRow("Subscription", "Free") { SubNav.open("Subscription") }
+                XRow("Subscription", plan.name) { SubNav.open("Subscription") }
                 XDivider()
                 XRow("Help & support") { SubNav.open("Help") }
                 XDivider()
