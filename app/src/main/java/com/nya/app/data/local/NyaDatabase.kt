@@ -191,10 +191,14 @@ val Migration3To4 = object : Migration(3, 4) {
     }
 }
 
+/**
+ * Changing an entity means: bump [version], add a Migration, and commit the new schema JSON Room exports to
+ * app/schemas. Keep the JSON of every released version. Never use destructive migration, it wipes user data.
+ */
 @Database(
     entities = [MemoryEntity::class, ChatMessageEntity::class, DeviceEntity::class, ProfileEntity::class, SeedMark::class],
     version = 4,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class NyaDatabase : RoomDatabase() {
     abstract fun memoryDao(): MemoryDao

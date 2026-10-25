@@ -2,7 +2,6 @@ package com.nya.app.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -13,17 +12,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,16 +52,6 @@ fun Heading(text: String) {
 }
 
 @Composable
-fun SocialCircle(content: @Composable () -> Unit) {
-    val c = LocalNya.current
-    Box(
-        Modifier.size(54.dp).pressScale { }.semantics { disabled(); stateDescription = "Coming soon" }.clip(CircleShape).background(c.sf)
-            .border(1.dp, c.ln, CircleShape),
-        contentAlignment = Alignment.Center
-    ) { content() }
-}
-
-@Composable
 fun SocialRow(onGoogle: () -> Unit) {
     val c = LocalNya.current
     val dark = c == NyaDark
@@ -69,20 +59,11 @@ fun SocialRow(onGoogle: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp))
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterHorizontally)
+        horizontalArrangement = Arrangement.Center
     ) {
-        SocialCircle {
-            Image(painterResource(R.drawable.ic_apple), "Continue with Apple", Modifier.size(22.dp),
-                colorFilter = ColorFilter.tint(c.tx))
-        }
         Image(
             painterResource(if (dark) R.drawable.ic_google_dark else R.drawable.ic_google_light),
             "Continue with Google", Modifier.size(54.dp).pressScale(onClick = onGoogle).clip(CircleShape)
-        )
-        Image(
-            painterResource(R.drawable.ic_facebook),
-            "Continue with Facebook",
-            Modifier.size(54.dp).pressScale { }.semantics { disabled(); stateDescription = "Coming soon" }.clip(CircleShape)
         )
     }
 }
@@ -152,6 +133,19 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
     var confirm by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
     var terms by remember { mutableStateOf(false) }
+    var legalDoc by remember { mutableStateOf<LegalDoc?>(null) }
+    val legal = LocalConfig.current.legal
+    val link = TextLinkStyles(SpanStyle(color = c.ac))
+    val agreement = buildAnnotatedString {
+        append("I agree to the ")
+        withLink(LinkAnnotation.Clickable("terms", link) { context.openLegal(legal.termsUrl) { legalDoc = TermsDoc } }) {
+            append("Terms")
+        }
+        append(" and ")
+        withLink(LinkAnnotation.Clickable("privacy", link) { context.openLegal(legal.privacyUrl) { legalDoc = PrivacyDoc } }) {
+            append("Privacy Policy")
+        }
+    }
     Page {
         Spacer(Modifier.height(24.dp))
         Heading("Create account")
@@ -173,7 +167,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(terms, null, Modifier.minimumInteractiveComponentSize(), colors = CheckboxDefaults.colors(checkedColor = c.ac))
-            Text("I agree to the Terms and Privacy Policy", color = c.tx, fontSize = 13.sp)
+            Text(agreement, color = c.tx, fontSize = 13.sp)
         }
         Spacer(Modifier.height(16.dp))
         NyaButton("Create account", { auth.signUp(name, email, pass, confirm, dobText(dob), terms) { onVerify() } },
@@ -184,6 +178,7 @@ fun SignUpScreen(onSignIn: () -> Unit, onVerify: () -> Unit, onGoogle: (AuthUser
             modifier = Modifier.fillMaxWidth().padding(top = 9.dp).pressScale(onClick = onSignIn)
                 .minimumInteractiveComponentSize())
     }
+    legalDoc?.let { LegalDialog(it) { legalDoc = null } }
 }
 
 @Composable

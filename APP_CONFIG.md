@@ -25,4 +25,4 @@ Numbers may be integers or decimals.
 | `voiceRate` | number 0.5-2.0 | `0.85` | Speech speed |
 | `plans.<free\|plus\|pro>.dailyMessages` | number (>= 0) | 30 / 200 / 1000 | Daily AI message limit per plan; 0 = unlimited. Counted on the device for now |
 | `features.aiChat`, `voiceReplies`, `findMy`, `firmwareUpdates`, `share` | boolean | `true` | Turns a feature off |
-| `legal.privacyUrl`, `legal.termsUrl` | string, http(s) URL | empty | Links to the policies; anything else is treated as empty |
+| `legal.privacyUrl`, `legal.termsUrl` | string, http(s) URL | empty | Links to the policies; anything else is treated as empty. Settings and the sign-up text open the URL when set, otherwise the in-app placeholder text (`ui/Legal.kt`) |

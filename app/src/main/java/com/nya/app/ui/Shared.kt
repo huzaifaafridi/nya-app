@@ -167,6 +167,8 @@ fun SubRouter(name: String, onBack: () -> Unit) {
         "Capture" -> CaptureScreen(onBack)
         "HeadbandSettings" -> HeadbandSettingsScreen(onBack)
         "Firmware" -> FirmwareScreen(onBack)
+        "Privacy" -> PrivacyScreen(onBack)
+        "Terms" -> TermsScreen(onBack)
 
         else -> {}
     }

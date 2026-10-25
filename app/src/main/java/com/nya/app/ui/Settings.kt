@@ -91,14 +91,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 XDivider()
                 XRow("Read-only mode preview") { SubNav.open("ReadOnly") }
                 XDivider()
-                legal.privacyUrl.takeIf { it.isNotEmpty() }?.let {
-                    XRow("Privacy policy") { context.openUrl(it) }
-                    XDivider()
-                }
-                legal.termsUrl.takeIf { it.isNotEmpty() }?.let {
-                    XRow("Terms of service") { context.openUrl(it) }
-                    XDivider()
-                }
+                XRow("Privacy policy") { context.openLegal(legal.privacyUrl) { SubNav.open("Privacy") } }
+                XDivider()
+                XRow("Terms of service") { context.openLegal(legal.termsUrl) { SubNav.open("Terms") } }
+                XDivider()
                 XRow("Version", BuildConfig.VERSION_NAME)
             }
 
