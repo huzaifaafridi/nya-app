@@ -65,7 +65,7 @@ final class OnboardingFlowTest: XCTestCase {
         type("password1", into: app.secureTextFields["Password (min 8 characters)"])
         type("password1", into: app.secureTextFields["Confirm password"])
         type("01012000", into: app.textFields["Date of birth (DD/MM/YYYY)"])
-        XCTAssertEqual(app.textFields["Date of birth (DD/MM/YYYY)"].value as? String, "01/01/2000")
+        see("01/01/2000")
         app.swipeUp()
         tapStarting("I agree")
         shot("05-sign-up-filled")

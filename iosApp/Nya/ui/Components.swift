@@ -86,15 +86,17 @@ struct NyaField: View {
     var password = false
     var keyboardType: UIKeyboardType = .default
     var capitalize = false
+    var transformation: ((String) -> String)?
     @Environment(\.nya) private var c
     @FocusState private var focused: Bool
 
-    init(_ label: String, value: Binding<String>, password: Bool = false, keyboardType: UIKeyboardType = .default, capitalize: Bool = false) {
+    init(_ label: String, value: Binding<String>, password: Bool = false, keyboardType: UIKeyboardType = .default, capitalize: Bool = false, transformation: ((String) -> String)? = nil) {
         self.label = label
         _value = value
         self.password = password
         self.keyboardType = keyboardType
         self.capitalize = capitalize
+        self.transformation = transformation
     }
 
     var body: some View {
@@ -111,8 +113,14 @@ struct NyaField: View {
             .focused($focused)
             .accessibilityLabel(label)
             .nyaFont(16)
-            .foregroundStyle(c.tx)
-            .tint(c.ac)
+            .foregroundStyle(transformation == nil ? c.tx : .clear)
+            .tint(transformation == nil ? c.ac : .clear)
+            .overlay(alignment: .leading) {
+                // drawn over the field: rewriting the field's own text as you type drops fast keypresses
+                if let transformation {
+                    Text(transformation(value)).nyaFont(16).foregroundStyle(c.tx).allowsHitTesting(false)
+                }
+            }
             .keyboardType(keyboardType)
             // anything else lets iOS swap the field for its Automatic Strong Password cover
             .textContentType(password ? .oneTimeCode : nil)

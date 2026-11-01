@@ -176,8 +176,8 @@ struct SignUpScreen: View {
     @State private var terms = false
 
     var body: some View {
-        let dobShown = Binding(
-            get: { dateShown(dob) },
+        let dobDigits = Binding(
+            get: { dob },
             set: { dob = String($0.filter(\.isNumber).prefix(8)) }
         )
         Page {
@@ -192,7 +192,7 @@ struct SignUpScreen: View {
             Spacer().frame(height: 14)
             NyaField("Confirm password", value: $confirm, password: true)
             Spacer().frame(height: 14)
-            NyaField("Date of birth (DD/MM/YYYY)", value: dobShown, keyboardType: .numberPad)
+            NyaField("Date of birth (DD/MM/YYYY)", value: dobDigits, keyboardType: .numberPad, transformation: dateShown)
             Text("You must be 18 or older to use Nya.").nyaFont(12).foregroundStyle(c.sb).padding(.top, 6)
             HStack(spacing: 14) {
                 let box = RoundedRectangle(cornerRadius: 3)
