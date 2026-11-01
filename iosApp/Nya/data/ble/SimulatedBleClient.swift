@@ -25,7 +25,7 @@ final class SimulatedBleClient: BleClient {
         attempts += 1
         state = .connecting
         let gen = generation
-        let wait = Task { try? await Task.sleep(for: .milliseconds(CONNECT_MS)) }
+        let wait = Task<Void, Never> { try? await Task.sleep(for: .milliseconds(CONNECT_MS)) }
         inFlight = wait
         await wait.value
         inFlight = nil
