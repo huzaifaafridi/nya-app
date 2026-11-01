@@ -10,6 +10,14 @@ Nya is a companion app for a smart headband. This repo holds two native apps for
 | Project | Gradle | XcodeGen (`iosApp/project.yml`) |
 | Status | Full app (the reference) | Theme, models and a starter screen |
 
+## Git workflow
+
+- The owner works alone on this repo, so work directly on `main`.
+- After each task, commit and push to `main`.
+- Check that the iOS build on GitHub Actions passes, and that the Android app still builds with `gradlew`. If the Android build can't run on this computer, say why.
+- If a build fails, fix it before calling the task done.
+- Only create a separate branch when asked for one.
+
 ## The rule: Kotlin first, then Swift
 
 Every feature is built and finished in Kotlin first, then ported to Swift.
