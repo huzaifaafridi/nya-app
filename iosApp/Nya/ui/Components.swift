@@ -114,6 +114,8 @@ struct NyaField: View {
             .foregroundStyle(c.tx)
             .tint(c.ac)
             .keyboardType(keyboardType)
+            // anything else lets iOS swap the field for its Automatic Strong Password cover
+            .textContentType(password ? .oneTimeCode : nil)
             .textInputAutocapitalization(capitalize ? .words : .never)
             .autocorrectionDisabled()
             .padding(.horizontal, 16)

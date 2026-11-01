@@ -167,6 +167,7 @@ struct AvatarScreen: View {
                 .padding(24)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .clipped()
             NyaButton("Continue") {
                 app.setSkin(Skins[picked])
                 onContinue()
@@ -372,6 +373,7 @@ struct PairScreen: View {
                 .frame(minHeight: g.size.height)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .clipped()
         }
         .nyaBg()
     }

@@ -11,6 +11,7 @@ struct Page<Content: View>: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
+        .clipped() // stops content scrolling under the status bar, like statusBarsPadding
         .nyaBg()
     }
 }
