@@ -15,3 +15,7 @@
 local.properties
 .kotlin
 .claude/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+/iosApp/build
