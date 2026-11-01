@@ -20,12 +20,27 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nya.app
         GENERATE_INFOPLIST_FILE: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
         INFOPLIST_KEY_CFBundleDisplayName: Nya
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+  NyaUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - NyaUITests
+    dependencies:
+      - target: Nya
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nya.app.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
 schemes:
   Nya:
     build:
       targets:
         Nya: all
+    test:
+      targets:
+        - NyaUITests

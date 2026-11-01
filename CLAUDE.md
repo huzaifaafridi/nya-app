@@ -8,7 +8,7 @@ Nya is a companion app for a smart headband. This repo holds two native apps for
 | Language / UI | Kotlin, Jetpack Compose | Swift, SwiftUI |
 | Source root | `app/src/main/java/com/nya/app/` | `iosApp/Nya/` |
 | Project | Gradle | XcodeGen (`iosApp/project.yml`) |
-| Status | Full app (the reference) | Theme, models and a starter screen |
+| Status | Full app (the reference) | Theme, models and onboarding |
 
 ## Git workflow
 
@@ -54,21 +54,33 @@ Base names must be unique across the Swift target, because Swift does not allow 
 - `LocalNya.current` becomes `@Environment(\.nya) private var c`.
 - `NyaGreen` and `NyaDanger` become `c.green` and `c.danger`.
 - `Scene` in this module is our enum, so the SwiftUI protocol must be written `SwiftUI.Scene`.
+- Compose `sp` sizes use `.nyaFont(size)`, so text follows the phone's text size setting.
+- `Modifier.pressScale` is the `.pressScale { }` view modifier, and it goes after clip and background, not before.
+- Keep SVG path strings identical to Kotlin and draw them with `parsePath`.
 
 ## Port status
 
 Ported:
 
-- `ui/theme/Color.kt` and `Theme.kt`, plus the status colours from `ui/Shared.kt`
+- `ui/theme/Color.kt`, `Theme.kt` and `Type.kt` (fonts only, as `nyaFont`), plus the status colours from `ui/Shared.kt`
 - `data/Models.kt`
-- Model types from `AuthRepository.kt`, `ChatRepository.kt`, `ProfileRepository.kt`, `SettingsRepository.kt` and `ble/BleClient.kt`
-- The top of `WelcomeScreen` (logo and title, no buttons yet)
+- Onboarding and its navigation: Welcome, Sign in, Sign up and Greeting (`ui/Screens.kt`), everything in `ui/Onboarding.kt`, `ui/PairFail.kt`, `ui/Help.kt`, and the navigation from `MainActivity.kt`
+- What those screens use: `ui/Avatar2D.kt`, `ui/Voice.kt`, `ui/Motion.kt`, `ui/Components.kt`, `NyaOrb` and `IconBtn` from `ui/Parts.kt`, `NyaChip` from `ui/Photos.kt`, the `X*` parts of `ui/Shared.kt`, and the `Back`, `Play` and `Stop` icons
+- `viewmodel/AppViewModel.kt`, `AuthViewModel.kt` and the connect part of `DeviceViewModel.kt`
+- `AuthRepository.kt` (the fake), `ProfileRepository.kt`, `SettingsRepository.kt` (both on `UserDefaults`), and the connect part of `DeviceRepository.kt` and `ble/SimulatedBleClient.kt`
+
+iOS-only stand-ins, to replace as the real thing is ported:
+
+- `ui/Home.swift` is a placeholder with a Sign out button, not the real Home.
+- Auth is `FakeAuthRepository`, so any details sign in and Google signs in as "Mercy". Android uses Firebase.
+- `SimulatedDeviceRepository` replaces the Room-backed device repository.
+- `ui/PathParser.swift` has no Kotlin file. It stands in for Compose's `PathParser`.
 
 Not ported:
 
 - `data/local/Entities.kt`: these are Room table shapes, so port them when iOS storage is chosen.
-- `ui/theme/Type.kt`, and all repositories, view models, navigation and other screens.
-- Colours that belong to one feature, such as those in `Avatar2D.kt` and `Photos.kt`, and the skin tones in `Onboarding.kt`. Port these with that feature.
+- Home, Chat, Memories, Device, Settings, Subscription and the other main screens, plus their repositories and view models.
+- Colours that belong to those features, such as the ones in `Photos.kt`. Port these with that feature.
 
 Update this list when a port lands.
 
@@ -77,6 +89,8 @@ Update this list when a port lands.
 Android: `./gradlew assembleDebug` to build, `./gradlew test` for unit tests.
 
 iOS: development happens on Windows with no Mac, so Swift cannot be compiled locally. `.github/workflows/ios.yml` builds the app on a macOS runner on every push that touches `iosApp/`. Treat Swift as unverified until that workflow passes, and check it after every Swift change.
+
+The workflow also runs `iosApp/NyaUITests/OnboardingFlowTest.swift` in a simulator, which walks the whole onboarding flow. It saves a screenshot of each screen in the `Nya-screenshots` artifact, so UI work can be checked without a Mac. A change to the flow must keep that test passing.
 
 `Nya.xcodeproj` is generated and git-ignored; never commit it. On a Mac:
 

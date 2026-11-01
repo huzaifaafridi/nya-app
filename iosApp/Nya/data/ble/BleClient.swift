@@ -11,3 +11,13 @@ struct DeviceStatus: Hashable, Sendable {
     var storageTotalGb: Float
     var firmware: String
 }
+
+/// Low-level link to the headband.
+@MainActor
+protocol BleClient: AnyObject {
+    var state: LinkState { get }
+    var status: DeviceStatus? { get } // live readings while connected, nil otherwise
+
+    func connect() async throws
+    func disconnect() async
+}
