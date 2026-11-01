@@ -1,0 +1,32 @@
+name: iOS build
+
+on:
+  push:
+    paths:
+      - "iosApp/**"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "iosApp/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: iosApp
+        run: xcodegen generate
+      - name: Build for the iOS simulator
+        working-directory: iosApp
+        run: |
+          xcodebuild build \
+            -project Nya.xcodeproj \
+            -scheme Nya \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
