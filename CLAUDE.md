@@ -79,3 +79,13 @@ open Nya.xcodeproj
 ```
 
 Change project settings in `project.yml`, not in Xcode.
+
+## Testing on iPhone
+
+There is no paid Apple Developer account, so testing uses a free Apple ID and Sideloadly on Windows.
+
+- `.github/workflows/ios.yml` also builds for `iphoneos` without code signing, packages an unsigned `Nya.ipa`, and uploads it as the `Nya-ipa` artifact on the Actions run.
+- Sideloadly signs the `.ipa` with the free Apple ID during install, so CI needs no certificates or secrets.
+- The install expires after 7 days. Reinstall with Sideloadly; the same `.ipa` still works.
+- GitHub deletes artifacts after 90 days by default, and a free Apple ID allows at most 3 sideloaded apps on a device.
+- The app has no icon yet, so it shows a blank one on the home screen.

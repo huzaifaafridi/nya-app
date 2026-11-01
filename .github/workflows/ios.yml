@@ -30,3 +30,30 @@ jobs:
             -scheme Nya \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
+      - name: Build for real iPhones (unsigned)
+        working-directory: iosApp
+        run: |
+          xcodebuild build \
+            -project Nya.xcodeproj \
+            -scheme Nya \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Package unsigned .ipa
+        working-directory: iosApp/build
+        run: |
+          mkdir Payload
+          cp -R Build/Products/Release-iphoneos/Nya.app Payload/
+          lipo -archs Payload/Nya.app/Nya | grep -q arm64
+          test "$(plutil -extract CFBundleSupportedPlatforms.0 raw Payload/Nya.app/Info.plist)" = iPhoneOS
+          zip -qry Nya.ipa Payload
+      - name: Upload .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nya-ipa
+          path: iosApp/build/Nya.ipa
+          if-no-files-found: error
