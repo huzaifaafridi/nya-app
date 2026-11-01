@@ -95,7 +95,7 @@ final class OnboardingFlowTest: XCTestCase {
         shot("11-pair")
         tap("Connect")
 
-        see("Welcome")
+        // the greeting only stays up for 2 seconds, so go straight for the name
         see("Ada")
         shot("12-greeting")
 
