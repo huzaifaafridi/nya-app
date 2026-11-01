@@ -86,7 +86,7 @@ Update this list when a port lands.
 
 ## Building
 
-Android: `./gradlew assembleDebug` to build, `./gradlew test` for unit tests.
+Android: `./gradlew assembleDebug` to build, `./gradlew test` for unit tests. Both need `app/google-services.json`, the git-ignored Firebase config. Without it the build stops at `processDebugGoogleServices`. Gradle also needs `JAVA_HOME` set to Android Studio's `jbr` folder and `ANDROID_HOME` set to the SDK.
 
 iOS: development happens on Windows with no Mac, so Swift cannot be compiled locally. `.github/workflows/ios.yml` builds the app on a macOS runner on every push that touches `iosApp/`. Treat Swift as unverified until that workflow passes, and check it after every Swift change.
 
