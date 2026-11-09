@@ -57,7 +57,7 @@ jobs:
           name: Nya-ipa
           path: iosApp/build/Nya.ipa
           if-no-files-found: error
-      - name: Walk through onboarding in the simulator
+      - name: Run unit tests and walk through onboarding in the simulator
         working-directory: iosApp
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c "

@@ -25,6 +25,17 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+  NyaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - NyaTests
+    dependencies:
+      - target: Nya
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nya.app.tests
+        GENERATE_INFOPLIST_FILE: "YES"
   NyaUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -43,4 +54,5 @@ schemes:
         Nya: all
     test:
       targets:
+        - NyaTests
         - NyaUITests
