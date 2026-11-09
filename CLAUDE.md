@@ -63,7 +63,7 @@ Base names must be unique across the Swift target, because Swift does not allow 
 Ported:
 
 - `ui/theme/Color.kt`, `Theme.kt` and `Type.kt` (fonts only, as `nyaFont`), plus the status colours from `ui/Shared.kt`
-- `data/Models.kt`
+- `data/Models.kt`, `data/AppConfig.kt` (with `parseAppConfig`) and `data/ble/NyaBleUuids.kt`
 - Onboarding and its navigation: Welcome, Sign in, Sign up and Greeting (`ui/Screens.kt`), everything in `ui/Onboarding.kt`, `ui/PairFail.kt`, `ui/Help.kt`, and the navigation from `MainActivity.kt`
 - What those screens use: `ui/Avatar2D.kt`, `ui/Voice.kt`, `ui/Motion.kt`, `ui/Components.kt`, `NyaOrb` and `IconBtn` from `ui/Parts.kt`, `NyaChip` from `ui/Photos.kt`, the `X*` parts of `ui/Shared.kt`, and the `Back`, `Play` and `Stop` icons
 - `viewmodel/AppViewModel.kt`, `AuthViewModel.kt` and the connect part of `DeviceViewModel.kt`
@@ -72,6 +72,7 @@ Ported:
 iOS-only stand-ins, to replace as the real thing is ported:
 
 - `ui/Home.swift` is a placeholder with a Sign out button, not the real Home.
+- `DefaultAppConfigRepository` serves the built-in `AppConfig` defaults until the Firestore listener is ported.
 - Auth is `FakeAuthRepository`, so any details sign in and Google signs in as "Mercy". Android uses Firebase.
 - `SimulatedDeviceRepository` replaces the Room-backed device repository.
 - `ui/PathParser.swift` has no Kotlin file. It stands in for Compose's `PathParser`.
@@ -82,7 +83,7 @@ Not ported:
 - Home, Chat, Memories, Device, Settings, Subscription and the other main screens, plus their repositories and view models.
 - Colours that belong to those features, such as the ones in `Photos.kt`. Port these with that feature.
 
-Update this list when a port lands.
+Update this list when a port lands. The full file-by-file inventory and phase plan is `iosApp/PORT_PLAN.md`.
 
 ## Building
 
@@ -90,7 +91,7 @@ Android: `./gradlew assembleDebug` to build, `./gradlew test` for unit tests. Bo
 
 iOS: development happens on Windows with no Mac, so Swift cannot be compiled locally. `.github/workflows/ios.yml` builds the app on a macOS runner on every push that touches `iosApp/`. Treat Swift as unverified until that workflow passes, and check it after every Swift change.
 
-The workflow also runs `iosApp/NyaUITests/OnboardingFlowTest.swift` in a simulator, which walks the whole onboarding flow. It saves a screenshot of each screen in the `Nya-screenshots` artifact, so UI work can be checked without a Mac. A change to the flow must keep that test passing.
+The workflow also runs the unit tests in `iosApp/NyaTests/`, which are ports of the Kotlin unit tests at the same relative paths (for example `data/AppConfigTest.swift`). They must never write to `UserDefaults.standard`, because they run in the same simulator just before the UI test. It then runs `iosApp/NyaUITests/OnboardingFlowTest.swift` in a simulator, which walks the whole onboarding flow. It saves a screenshot of each screen in the `Nya-screenshots` artifact, so UI work can be checked without a Mac. A change to the flow must keep that test passing.
 
 `Nya.xcodeproj` is generated and git-ignored; never commit it. On a Mac:
 

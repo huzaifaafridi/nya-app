@@ -21,13 +21,13 @@ Baseline: Kotlin at `87b35d6`. The existing Swift was ported against `1ec26c6`.
 |---|---:|---|---|---|---|
 | `MainActivity.kt` | 107 | `NyaApp.swift` | Stale | 3 | Navigation is ported. Missing: `LocalConfig`, and the update-required and maintenance gates above every screen |
 | `NyaApp.kt` | 15 | `NyaApp.swift` | Stale | 2 | Missing: `FirebaseApp.configure()` and `installAppCheck()` before the container |
-| `AppCheck.kt` (debug and release source sets) | 13 + 10 | `AppCheck.swift` | Missing | 2 | One file using `#if DEBUG`: the debug provider in Debug. Release needs App Attest (paid account), see decision D1 |
+| `AppCheck.kt` (debug and release source sets) | 13 + 10 | `AppCheck.swift` | Missing | 2 | Debug provider in Debug and in the `Sideload` configuration only. Release (App Store and TestFlight) is reserved for App Attest. See D1 |
 
 ### data
 | Kotlin | Lines | Swift | Status | Phase | Notes |
 |---|---:|---|---|---|---|
-| `data/AppConfig.kt` | 182 | — | Missing | 1 | `AppConfig`, `BleConfig`, `AiConfig`, `CompanionConfig`, `LegalConfig`, plans, features, voice styles and `parseAppConfig`, with the same defaults and limits |
-| `data/AppConfigRepository.kt` | 39 | — | Missing | 1 | Live listener on Firestore `appConfig/main`. Starts as the defaults, and an error keeps the current value. Before phase 2, a stand-in that only serves defaults |
+| `data/AppConfig.kt` | 182 | `AppConfig.swift` | **Done (phase 1)** | 1 | `AppConfig`, `BleConfig`, `AiConfig`, `CompanionConfig`, `LegalConfig`, plans, features, voice styles and `parseAppConfig`, with the same defaults and limits |
+| `data/AppConfigRepository.kt` | 39 | `AppConfigRepository.swift` | **Stand-in (phase 1)** | 1 → 2 | The protocol is ported. `DefaultAppConfigRepository` serves the built-in defaults until phase 2 adds the live Firestore listener on `appConfig/main` |
 | `data/AppContainer.kt` | 48 | `AppContainer.swift` (15) | Stale | 2 → 7 | Grows as each repository lands |
 | `data/AuthErrors.kt` | 21 | `AuthErrors.swift` (8) | Done | 2 | Check the Firebase error mapping once real auth is in |
 | `data/AuthRepository.kt` | 43 | `AuthRepository.swift` (71) | Stand-in | 2 | The protocol is ported, and `FakeAuthRepository` stays for tests |
@@ -43,12 +43,12 @@ Baseline: Kotlin at `87b35d6`. The existing Swift was ported against `1ec26c6`.
 | `data/GeminiReplyEngine.kt` | 83 | — | Missing | 5 | FirebaseAI: model list from config, falls back on quota, server error or 7 s silence, same system prompt |
 | `data/MediaStore.kt` | 11 | — | Missing | 4 | |
 | `data/MemoryRepository.kt` | 53 | — | Missing | 4 | |
-| `data/Models.kt` | 70 | `Models.swift` (62) | Stale | 1 | Add `Prefs.notifications`, the new `DeviceInfo` fields, `HeadbandSettings`, `MaxDeviceNameLength` and `DefaultCaptureQuality` |
-| `data/ProfileRepository.kt` | 113 | `ProfileRepository.swift` (47) | Stale | 1, then 4 | Phase 1: `notifications`, `suggestName` and `MaxNameLength = 100` on the UserDefaults store. Phase 4: the per-account store, legacy import and cloud push |
+| `data/Models.kt` | 70 | `Models.swift` | **Done (phase 1)** | 1 | Add `Prefs.notifications`, the new `DeviceInfo` fields, `HeadbandSettings`, `MaxDeviceNameLength` and `DefaultCaptureQuality` |
+| `data/ProfileRepository.kt` | 113 | `ProfileRepository.swift` | **Partial (phase 1 done)** | 1, then 4 | Phase 1 done: `notifications`, `suggestName`, `MaxNameLength = 100`, name capping and `FakeProfileRepository`. Phase 4: the per-account store, legacy import and cloud push |
 | `data/SettingsRepository.kt` | 65 | `SettingsRepository.swift` (40) | Done | — | UserDefaults in place of DataStore |
 | `data/UsageRepository.kt` | 67 | — | Missing | 7 | Daily count stored on the phone |
 | `data/ble/BleClient.kt` | 39 | `BleClient.swift` (23) | Stale | 6 | `applySettings`, `updateFirmware` and `FirmwareStep` |
-| `data/ble/NyaBleUuids.kt` | 9 | `NyaBleUuids.swift` (7) | Stale | 1 | Headband UUIDs and `NAME_PREFIX` moved into `BleConfig` |
+| `data/ble/NyaBleUuids.kt` | 9 | `NyaBleUuids.swift` | **Done (phase 1)** | 1 | Only the standard battery UUIDs are left. The headband ones live in `BleConfig`, and the simulator reads `namePrefix` from config |
 | `data/ble/SimulatedBleClient.kt` | 171 | `SimulatedBleClient.swift` (48) | Partial | 6 | |
 | `data/local/Entities.kt` | 94 | `local/Entities.swift` | Missing | 4 | SwiftData `@Model` classes with the same fields |
 | `data/local/NyaDatabase.kt` | 209 | `local/NyaDatabase.swift` | Missing | 4 | DAOs become small query types over a `ModelContainer`. No Room migrations are needed, since iOS starts fresh |
@@ -69,7 +69,7 @@ Baseline: Kotlin at `87b35d6`. The existing Swift was ported against `1ec26c6`.
 | `ui/HeadbandSettings.kt` | 99 | — | Missing | 6 | |
 | `ui/Help.kt` | 55 | `Help.swift` | Done | — | |
 | `ui/Home.kt` | 212 | `Home.swift` (18) | Stand-in | 5 | Currently a placeholder with a Sign out button |
-| `ui/Icons.kt` | 88 | `Icons.swift` (53) | Stale | 1, then later | Phase 1: `Filter` becomes `Clear`. Other icons arrive with their screens |
+| `ui/Icons.kt` | 88 | `Icons.swift` | Partial | later | Nothing to do in phase 1: `Filter` was never ported, and `Clear` arrives with Memories in phase 5. Other icons arrive with their screens |
 | `ui/Legal.kt` | 81 | — | Missing | 3 | `LegalDoc`, `LegalDialog`, `openLegal`, and the Privacy and Terms screens |
 | `ui/Memories.kt` | 161 | — | Missing | 5 | Search and share |
 | `ui/Motion.kt` | 122 | `Motion.swift` | Done | — | |
@@ -89,8 +89,8 @@ Baseline: Kotlin at `87b35d6`. The existing Swift was ported against `1ec26c6`.
 ### viewmodel
 | Kotlin | Lines | Swift | Status | Phase | Notes |
 |---|---:|---|---|---|---|
-| `viewmodel/AppViewModel.kt` | 81 | `AppViewModel.swift` (38) | Stale | 1 + 7 | Phase 1: `config` and `setNotifications`. Phase 7: `plan` |
-| `viewmodel/AuthViewModel.kt` | 133 | `AuthViewModel.swift` (123) | Stale | 1 | Sets the name only for new accounts, otherwise calls `suggestName` |
+| `viewmodel/AppViewModel.kt` | 81 | `AppViewModel.swift` | **Partial (phase 1 done)** | 1 + 7 | Phase 1 done: `config`, `notifications` in `prefs`, and `setNotifications`. Phase 7: `plan` |
+| `viewmodel/AuthViewModel.kt` | 133 | `AuthViewModel.swift` | **Done (phase 1)** | 1 | Sets the name only for new accounts, otherwise calls `suggestName`. The date of birth check is now as strict as Kotlin's (see quirks) |
 | `viewmodel/ChatViewModel.kt` | 52 | — | Missing | 5 | Quota, and the `aiChat` feature flag |
 | `viewmodel/DeviceViewModel.kt` | 192 | `DeviceViewModel.swift` (28) | Partial | 6 | |
 | `viewmodel/EditProfileViewModel.kt` | 82 | — | Missing | 7 | |
@@ -104,7 +104,7 @@ Baseline: Kotlin at `87b35d6`. The existing Swift was ported against `1ec26c6`.
 |---|---|
 | `ui/PathParser.swift` | Stands in for Compose's `PathParser`. Keep it |
 
-**Totals for the 68 files in `main`:** 10 Done, 13 Stale, 6 Partial, 3 Stand-in and 36 Missing. The two `AppCheck.kt` files in the debug and release source sets are also Missing.
+**Totals for the 68 files in `main`, after phase 1:** 14 Done, 7 Stale, 9 Partial, 4 Stand-in and 34 Missing. At the start: 10 Done, 13 Stale, 6 Partial, 3 Stand-in and 36 Missing. The two `AppCheck.kt` files in the debug and release source sets are also Missing.
 
 ## Tests
 
@@ -147,15 +147,23 @@ ios-tester extends the UI tests and CI screenshots in each phase.
 
 ## Decisions for the owner
 
-- **D1. App Check on the sideloaded iPhone build.** The `.ipa` is built in **Release**, and real attestation (App Attest) needs a paid Apple Developer account. The options are:
-  - (a) *Recommended:* the CI-built `.ipa` uses the debug provider with the `APP_CHECK_DEBUG_TOKEN` secret built in. This works even once App Check is enforced. The token sits inside the `.ipa`, which is acceptable for a personal test build, and it can be revoked at any time. App Attest stays a marked TODO for the App Store build.
-  - (b) Release uses App Attest only, and chat on the sideloaded app works only while AI Logic stays on Monitoring.
-- **D2. Storage.** Use SwiftData (iOS 17, which matches `deploymentTarget`) as `ios-lead.md` says. It has no migrations, since no iOS users have data yet.
+- **D1. App Check (decided: option a).** The sideloaded `.ipa` uses the debug provider with the `APP_CHECK_DEBUG_TOKEN` secret built in, and it must never be able to ship. How phase 2 does it:
+  - `project.yml` gets a third build configuration, **`Sideload`**, based on Release. Only Debug and Sideload set the Swift flag `NYA_APPCHECK_DEBUG`, and only Sideload gets the token, through a build setting that CI passes in from the secret.
+  - `AppCheck.swift` installs `AppCheckDebugProviderFactory` only under `#if NYA_APPCHECK_DEBUG`. The `Release` configuration, which App Store and TestFlight archives use, has neither the flag nor the token, so the debug provider code is not even compiled in.
+  - CI builds the sideloaded `.ipa` with `-configuration Sideload`. A CI check fails the build if `NYA_APPCHECK_DEBUG` or the token ever appears in the Release settings.
+  - **TODO before any App Store or TestFlight release: switch Release to App Attest** (`AppAttestProvider`, with the DeviceCheck fallback for older iOS). This needs a paid Apple Developer account and the App Attest capability. Until then, Release has no App Check provider, so chat works on it only while AI Logic is on Monitoring.
+- **D2. Storage (decided).** SwiftData (iOS 17, which matches `deploymentTarget`). There are no migrations, since no iOS users have data yet.
 
 ## Kotlin quirks to copy as they are (unless the owner says otherwise)
 
-- (none recorded yet; added as they're found)
+- **Config numbers:** Kotlin's `Number.toLong()` turns NaN into 0, so a NaN `plans.*.dailyMessages` becomes a limit of 0, because 0 is in range. Swift copies this, and `AppConfigTest.testNonFiniteAndHugeNumbersNeverTrap` pins it.
+- **Name cap:** Kotlin's `take(100)` counts UTF-16 units and can cut an emoji in half. Swift keeps whole characters, so the result is never longer than Kotlin's and never broken. Intentional, and it doesn't affect the Firestore rule.
+
+## Port bugs found and fixed
+
+- Phase 1: Swift's date of birth check accepted `1/1/2000` and three-digit years such as `09/02/200`. Kotlin's `dd/MM/uuuu` STRICT rejects both. Fixed with an exact-shape check plus a round trip. `AuthViewModelTest.testMalformedBirthDatesAreRejected` covers it.
 
 ## Log
 
 - Plan created on `ios-port` from `main` at `87b35d6`.
+- Phase 1 written: `AppConfig`, the `AppConfigRepository` stand-in, the Models and Profile changes, `NyaBleUuids`, the simulator's name prefix from config, the App and Auth view models, and the `NyaTests` target with `AppConfigTest`, `ProfileRepositoryTest` and `AuthViewModelTest`.
