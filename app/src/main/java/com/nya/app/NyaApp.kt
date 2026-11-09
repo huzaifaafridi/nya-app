@@ -8,6 +8,8 @@ class NyaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // before anything talks to Firebase AI Logic, which needs a valid App Check token
+        installAppCheck()
         container = AppContainer(this)
     }
 }
