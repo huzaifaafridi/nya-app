@@ -17,6 +17,11 @@ final class SimulatedBleClient: BleClient {
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var inFlight: Task<Void, Never>?
     @ObservationIgnored private let battery: Float = 0.82
+    @ObservationIgnored private let namePrefix: @MainActor () -> String
+
+    init(namePrefix: @escaping @MainActor () -> String = { BleConfig().namePrefix }) {
+        self.namePrefix = namePrefix
+    }
 
     func connect() async throws {
         // one attempt at a time, like the Kotlin connectLock
@@ -36,7 +41,7 @@ final class SimulatedBleClient: BleClient {
             state = .disconnected
             throw BleError(message: "Headband not found")
         }
-        status = DeviceStatus(name: "\(NyaBleUuids.NAME_PREFIX) F1", battery: battery, storageUsedGb: 4.1, storageTotalGb: 16, firmware: "1.1.4")
+        status = DeviceStatus(name: "\(namePrefix()) F1", battery: battery, storageUsedGb: 4.1, storageTotalGb: 16, firmware: "1.1.4")
         state = .connected
     }
 

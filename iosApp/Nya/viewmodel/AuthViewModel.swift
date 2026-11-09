@@ -9,9 +9,13 @@ final class AuthViewModel {
     private(set) var error: String?
     private(set) var info: String?
 
-    init(_ c: AppContainer) {
-        auth = c.auth
-        profile = c.profile
+    init(auth: AuthRepository, profile: ProfileRepository) {
+        self.auth = auth
+        self.profile = profile
+    }
+
+    convenience init(_ c: AppContainer) {
+        self.init(auth: c.auth, profile: c.profile)
     }
 
     func clearError() { error = nil }
@@ -34,20 +38,27 @@ final class AuthViewModel {
     private func finish(_ call: () async throws -> AuthUser, _ onDone: (AuthUser) -> Void) async {
         do {
             let user = try await call()
-            profile.update { $0.name = user.name }
+            if user.isNew { profile.update { $0.name = user.name } } else { profile.suggestName(user.name) }
             onDone(user)
         } catch {
             self.error = error.authMessage()
         }
     }
 
+    /// Kotlin's `dd/MM/uuuu` with ResolverStyle.STRICT: exactly 2, 2 and 4 ASCII digits and a real date.
+    /// DateFormatter alone also takes "1/1/2000" or a 3-digit year, so the shape and a round trip are checked too.
     private func ageOf(_ dob: String) -> Int? {
+        let text = dob.trimmingCharacters(in: .whitespacesAndNewlines)
+        let shape = Array(text.utf8)
+        let isDigit = { (b: UInt8) in b >= 0x30 && b <= 0x39 }
+        guard shape.count == 10, shape[2] == 0x2F, shape[5] == 0x2F,
+              [0, 1, 3, 4, 6, 7, 8, 9].allSatisfy({ isDigit(shape[$0]) }) else { return nil }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.calendar = Calendar(identifier: .gregorian)
         f.dateFormat = "dd/MM/yyyy"
         f.isLenient = false
-        guard let date = f.date(from: dob.trimmingCharacters(in: .whitespaces)) else { return nil }
+        guard let date = f.date(from: text), f.string(from: date) == text else { return nil }
         return Calendar(identifier: .gregorian).dateComponents([.year], from: date, to: Date()).year
     }
 

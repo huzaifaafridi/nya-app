@@ -21,6 +21,7 @@ struct Prefs: Hashable, Sendable {
     var skin: UInt32 = 0xFFE0AC84 // ARGB
     var gender: Gender = .female
     var voice: Int = 0
+    var notifications: Bool = true
     var theme: Int = 0 // 0 Auto, 1 Light, 2 Dark
     var quiet: Bool = false
     var mode: Int = 2 // 0 Travel, 1 Focus, 2 Wellness, 3 Creator
@@ -53,6 +54,28 @@ struct DeviceInfo: Hashable, Sendable {
     var firmware: String
     var latestFirmware: String?
     var state: LinkState = .disconnected
+    var autoSync: Bool = true
+    var captureQuality: Int = DefaultCaptureQuality
+    var ledIndicator: Bool = true
+    var lost: Bool = false
+    var lostAt: Int64? = nil // epoch ms when marked lost
+
+    var settings: HeadbandSettings {
+        HeadbandSettings(name: name, autoSync: autoSync, captureQuality: captureQuality, ledIndicator: ledIndicator)
+    }
+}
+
+/// Must match the device name size limit in firestore.rules.
+let MaxDeviceNameLength = 30
+
+let DefaultCaptureQuality = 1
+
+/// [captureQuality]: 0 Standard, 1 High, 2 Max.
+struct HeadbandSettings: Hashable, Sendable {
+    var name: String
+    var autoSync: Bool = true
+    var captureQuality: Int = DefaultCaptureQuality
+    var ledIndicator: Bool = true
 }
 
 struct TransferItem: Hashable, Sendable {

@@ -6,17 +6,21 @@ final class AppViewModel {
     @ObservationIgnored private let settings: SettingsRepository
     @ObservationIgnored private let profile: ProfileRepository
     @ObservationIgnored private let auth: AuthRepository
+    @ObservationIgnored private let appConfig: AppConfigRepository
 
     init(_ c: AppContainer) {
         settings = c.settings
         profile = c.profile
         auth = c.auth
+        appConfig = c.appConfig
     }
+
+    var config: AppConfig { appConfig.config }
 
     var prefs: Prefs {
         let s = settings.settings, p = profile.profile
         return Prefs(
-            name: p.name, companion: p.companion, skin: p.skin, gender: p.gender, voice: p.voice,
+            name: p.name, companion: p.companion, skin: p.skin, gender: p.gender, voice: p.voice, notifications: p.notifications,
             theme: s.theme, quiet: s.quiet, mode: s.mode, onboarded: s.onboarded
         )
     }
@@ -25,6 +29,7 @@ final class AppViewModel {
     func setSkin(_ argb: UInt32) { profile.update { $0.skin = argb } }
     func setGender(_ gender: Gender) { profile.update { $0.gender = gender } }
     func setVoice(_ voice: Int) { profile.update { $0.voice = voice } }
+    func setNotifications(_ on: Bool) { profile.update { $0.notifications = on } }
     func completeOnboarding() { settings.update { $0.onboarded = true } }
 
     var isSignedIn: Bool { auth.isSignedIn }
