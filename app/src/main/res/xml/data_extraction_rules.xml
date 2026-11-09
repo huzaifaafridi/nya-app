@@ -1,19 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Backup rules for Android 12 and higher.
+   The Room database is never backed up or transferred, so a stale schema from an
+   older build cannot be restored over a newer one. DataStore prefs (domain "file")
+   stay backed up.
    See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="database" path="nya.db" />
+        <exclude domain="database" path="nya.db-shm" />
+        <exclude domain="database" path="nya.db-wal" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="database" path="nya.db" />
+        <exclude domain="database" path="nya.db-shm" />
+        <exclude domain="database" path="nya.db-wal" />
     </device-transfer>
-    -->
 </data-extraction-rules>
