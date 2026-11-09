@@ -31,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import kotlin.time.Duration.Companion.seconds
 
 class ChatTest {
     @get:Rule val main = MainDispatcherRule()
@@ -105,6 +106,30 @@ class ChatTest {
         assertEquals(busy, chat.error.value)
         assertNull(chat.draft.value)
         assertEquals(listOf("hi", "par"), chat.texts())
+    }
+
+    @Test
+    fun stalledReplyTimesOutWithBusyAndKeepsThePartialText() = runTest {
+        val chat = FakeChatRepository(engine { emit("par"); awaitCancellation() }, backgroundScope)
+        chat.send("hi")
+        advanceTimeBy(ReplyTimeout - 1.seconds)
+        assertEquals("par", chat.draft.value)
+        assertNull(chat.error.value)
+        advanceTimeBy(2.seconds)
+        settle()
+        assertEquals(busy, chat.error.value)
+        assertNull(chat.draft.value)
+        assertEquals(listOf("hi", "par"), chat.texts())
+    }
+
+    @Test
+    fun slowButSteadyReplyIsNotCutOff() = runTest {
+        val chat = FakeChatRepository(engine { repeat(3) { delay(ReplyTimeout - 1.seconds); emit("ok ") } }, backgroundScope)
+        chat.send("hi")
+        advanceTimeBy(ReplyTimeout * 3)
+        settle()
+        assertNull(chat.error.value)
+        assertEquals(listOf("hi", "ok ok ok"), chat.texts())
     }
 
     @Test

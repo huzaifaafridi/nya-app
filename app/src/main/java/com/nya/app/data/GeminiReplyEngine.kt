@@ -7,18 +7,33 @@ import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.QuotaExceededException
 import com.google.firebase.ai.type.ServerException
 import com.google.firebase.ai.type.content
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 private const val MaxMessages = 30
+
+/**
+ * How long one model may take to send its first text before the next model is tried. Short enough that every
+ * fallback fits inside [ReplyTimeout]: a model that is out of quota can hang without answering instead of failing.
+ */
+val ModelFirstTextTimeout = 7.seconds
+
+/** A model sent no text within [ModelFirstTextTimeout]. */
+class ModelStalledException(model: String, timeout: Duration) : Exception("$model sent no text within $timeout")
 
 /** Reads models, prompt and companion traits from the config on every request, so remote changes apply to the next message. */
 class GeminiReplyEngine(private val appConfig: AppConfigRepository) : ReplyEngine {
     override fun reply(history: List<ChatMessage>, persona: ChatPersona): Flow<String> {
-        // TODO: add Firebase App Check (Play Integrity + debug provider) and enforce it for AI Logic before release.
         val config = appConfig.config.value
         val models = config.ai.models
         val system = content { text(buildSystemPrompt(config, persona)) }
@@ -29,17 +44,33 @@ class GeminiReplyEngine(private val appConfig: AppConfigRepository) : ReplyEngin
             .generateContentStream(turns)
             .map { it.text.orEmpty() }
             .filter { it.isNotEmpty() }
+            .failIfSilent(ModelFirstTextTimeout) { ModelStalledException(name, it) }
         val withFallbacks = models.zipWithNext().fold(stream(models.first())) { flow, (failed, next) ->
             flow.catch {
-                if (it !is QuotaExceededException && it !is ServerException) throw it
+                if (it !is QuotaExceededException && it !is ServerException && it !is ModelStalledException) throw it
                 Log.w("NyaAI", "$failed unavailable (${it::class.java.simpleName}), falling back to $next")
                 emitAll(stream(next))
             }
         }
         return withFallbacks.catch {
-            Log.e("NyaAI", "Gemini call failed: ${it::class.java.name}: ${it.message}", it)
+            if (it !is CancellationException) Log.e("NyaAI", "Gemini call failed: ${it::class.java.name}: ${it.message}", it)
             throw it
         }
+    }
+}
+
+/** Passes values through, but fails with [error] if the first one has not arrived within [timeout]. */
+internal fun <T> Flow<T>.failIfSilent(timeout: Duration, error: (Duration) -> Throwable): Flow<T> = flow {
+    coroutineScope {
+        val watchdog = launch {
+            delay(timeout)
+            throw error(timeout)
+        }
+        collect {
+            watchdog.cancel()
+            emit(it)
+        }
+        watchdog.cancel()
     }
 }
 

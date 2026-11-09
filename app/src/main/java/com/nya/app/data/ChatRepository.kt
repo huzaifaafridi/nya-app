@@ -8,6 +8,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -24,7 +26,10 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 interface ChatRepository {
     val history: Flow<List<ChatMessage>>
@@ -61,10 +66,17 @@ class FakeReplyEngine : ReplyEngine {
 internal const val Greeting = "Hey, I'm here. What's on your mind?"
 private const val BusyMessage = "Nya is busy right now, try again in a moment."
 
-/** Runs a reply in [scope], so it is still saved when the screen is left mid-stream. */
+/** How long a reply may go without new text before it is given up and the busy error shows. */
+val ReplyTimeout = 30.seconds
+
+/**
+ * Runs a reply in [scope], so it is still saved when the screen is left mid-stream. A reply that sends no new
+ * text for [replyTimeout] fails like any other engine error, so the chat never stays on "typing".
+ */
 abstract class StreamingChat(
     private val replies: ReplyEngine,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val replyTimeout: Duration = ReplyTimeout
 ) : ChatRepository {
     final override val draft = MutableStateFlow<String?>(null)
     final override val error = MutableStateFlow<String?>(null)
@@ -105,7 +117,7 @@ abstract class StreamingChat(
                     try {
                         val persona = persona()
                         saved = saveMine(text.trim()) ?: return@launch
-                        replies.reply(saved.conversation, persona).collect {
+                        replies.reply(saved.conversation, persona).collectWithIdleTimeout(replyTimeout) {
                             answer.append(it)
                             if (generation.get() == mine) draft.value = answer.toString()
                         }
@@ -115,25 +127,29 @@ abstract class StreamingChat(
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Throwable) {
-                        if (generation.get() == mine) {
-                            val partial = answer.toString().trim()
-                            if (saved != null && partial.isNotEmpty()) {
-                                try {
-                                    saveNya(saved.uid, partial)
-                                } catch (cancelled: CancellationException) {
-                                    throw cancelled
-                                } catch (ignored: Throwable) {
-                                    // The partial text is best effort; the busy error still shows.
-                                }
-                            }
-                            error.value = BusyMessage
-                        }
+                        failed(mine, saved, answer)
                     }
                 } finally {
                     if (generation.get() == mine) draft.value = null
                 }
             }
         }
+    }
+
+    /** Keeps whatever text arrived and shows the busy error, unless the reply has been dropped meanwhile. */
+    private suspend fun failed(mine: Int, saved: Saved?, answer: StringBuilder) {
+        if (generation.get() != mine) return
+        val partial = answer.toString().trim()
+        if (saved != null && partial.isNotEmpty()) {
+            try {
+                saveNya(saved.uid, partial)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (ignored: Throwable) {
+                // The partial text is best effort; the busy error still shows.
+            }
+        }
+        error.value = BusyMessage
     }
 }
 
@@ -201,4 +217,20 @@ class FakeChatRepository(
 
     private fun add(text: String, mine: Boolean): List<ChatMessage> =
         state.updateAndGet { it + ChatMessage(nextId++, text, mine) }
+}
+
+/** A reply sent no new text for the allowed time. */
+class ReplyTimeoutException(timeout: Duration) : Exception("No reply text for $timeout")
+
+/**
+ * Collects in order like [Flow.collect], but fails with [ReplyTimeoutException] when [timeout] passes without a
+ * new value. Unlike `Flow.timeout`, nothing is buffered, so values sent just before an error are never dropped.
+ */
+internal suspend fun <T> Flow<T>.collectWithIdleTimeout(timeout: Duration, action: suspend (T) -> Unit) = coroutineScope {
+    val arrived = Channel<Unit>(Channel.CONFLATED)
+    val watchdog = launch {
+        while (true) withTimeoutOrNull(timeout) { arrived.receive() } ?: throw ReplyTimeoutException(timeout)
+    }
+    collect { action(it); arrived.trySend(Unit) }
+    watchdog.cancel()
 }
