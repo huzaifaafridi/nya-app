@@ -87,6 +87,14 @@ final class AuthViewModelTest: XCTestCase {
         assertRejected("Password must be at least 8 characters.")
     }
 
+    // iOS only: Kotlin's length counts UTF-16 units, so four emoji (8 units) are long enough.
+    func testPasswordLengthCountsUtf16UnitsLikeKotlin() async {
+        signUp(pass: "😀😀😀😀")
+        XCTAssertNil(vm.error)
+        await settle()
+        XCTAssertEqual(1, auth.calls)
+    }
+
     func testMismatchedPasswordsAreRejected() {
         signUp(confirm: "password2")
         assertRejected("Passwords don't match.")

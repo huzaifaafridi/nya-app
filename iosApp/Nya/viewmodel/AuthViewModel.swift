@@ -79,7 +79,7 @@ final class AuthViewModel {
         var problem: String?
         if isBlank(name) { problem = "Enter your name." }
         else if isBlank(email) { problem = "Enter your email." }
-        else if pass.count < 8 { problem = "Password must be at least 8 characters." }
+        else if pass.utf16.count < 8 { // Kotlin String.length counts UTF-16 units problem = "Password must be at least 8 characters." }
         else if pass != confirm { problem = "Passwords don't match." }
         else if age == nil { problem = "Enter your date of birth as DD/MM/YYYY." }
         else if let age, age < 18 { problem = "You must be 18 or older to use Nya." }

@@ -158,12 +158,21 @@ ios-tester extends the UI tests and CI screenshots in each phase.
 
 - **Config numbers:** Kotlin's `Number.toLong()` turns NaN into 0, so a NaN `plans.*.dailyMessages` becomes a limit of 0, because 0 is in range. Swift copies this, and `AppConfigTest.testNonFiniteAndHugeNumbersNeverTrap` pins it.
 - **Name cap:** Kotlin's `take(100)` counts UTF-16 units and can cut an emoji in half. Swift keeps whole characters, so the result is never longer than Kotlin's and never broken. Intentional, and it doesn't affect the Firestore rule.
+- **String lengths:** Kotlin `length` counts UTF-16 units. Swift must use `.utf16.count` wherever Kotlin compares a length (config text limits, the 8-character password). `.count` counts characters and differs for emoji.
+- **Config floats:** `voiceRate` and the voice pitches are converted to Float before the range check, so `2.0000001` is accepted as `2`. Whole numbers are accepted too.
+- **Config sections:** an unknown key in `companions` is ignored, and a bad trait or tagline falls back one field at a time. `voiceStyles` is the one all-or-nothing field, so a saved voice index keeps its meaning. Every text field is trimmed first, then length-checked, and a blank or oversized value falls back.
+- **Dictionaries have no order:** `companions` and `plans` are Swift dictionaries, but Kotlin maps keep insertion order. Any UI that lists them (phases 5–7) must iterate `Companion.allCases` or `Plan.allCases`, never the dictionary.
+- **Name prefix read when needed:** the simulator reads `config.ble.namePrefix` through a closure at connect time, as Kotlin does. Keep it that way when phase 2 swaps in the Firestore repository.
+- **Date of birth edge cases (not copied):** Kotlin accepts the year `0000` and trims a slightly different set of control characters. Swift rejects year 0, because the Gregorian round trip fails. Too obscure to matter.
+- **`FakeProfileRepository` doesn't cap names.** Only the real store (Room on Android, the UserDefaults stand-in on iOS) caps them.
 
 ## Port bugs found and fixed
 
 - Phase 1: Swift's date of birth check accepted `1/1/2000` and three-digit years such as `09/02/200`. Kotlin's `dd/MM/uuuu` STRICT rejects both. Fixed with an exact-shape check plus a round trip. `AuthViewModelTest.testMalformedBirthDatesAreRejected` covers it.
+- Phase 1 (ios-tester): Swift counted the password length in characters, so 4 emoji were rejected. Kotlin counts UTF-16 units and accepts them. Fixed with `.utf16.count`. `AuthViewModelTest.testPasswordLengthCountsUtf16UnitsLikeKotlin` covers it.
 
 ## Log
 
 - Plan created on `ios-port` from `main` at `87b35d6`.
 - Phase 1 written: `AppConfig`, the `AppConfigRepository` stand-in, the Models and Profile changes, `NyaBleUuids`, the simulator's name prefix from config, the App and Auth view models, and the `NyaTests` target with `AppConfigTest`, `ProfileRepositoryTest` and `AuthViewModelTest`.
+- Phase 1: CI passed ([run 42622849774](https://github.com/huzaifaafridi/nya-app/actions/runs/42622849774)). ios-tester signed off, with one fix (password length). Quirks recorded above.
